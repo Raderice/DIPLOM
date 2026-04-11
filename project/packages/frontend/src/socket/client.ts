@@ -53,7 +53,7 @@ function ensureSocket(): ClientSocket {
   if (!socketSingleton) {
     socketSingleton = io(socketEndpoint(), {
       withCredentials: true,
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"],
       autoConnect: false,
       path: "/socket.io",
       reconnection: true,

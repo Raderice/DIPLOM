@@ -83,6 +83,30 @@ function emitGameState(io: IoServer, room: RuntimeRoom): void {
   }
 }
 
+function hasOtherConnectedSocketForUser(
+  io: IoServer,
+  roomId: string,
+  userId: string,
+  disconnectedSocketId: string
+): boolean {
+  const adapter = io.adapter as unknown as { rooms: Map<string, Set<string>> };
+  const socketIds = adapter.rooms.get(roomId);
+  if (!socketIds) return false;
+
+  const sockets = io.sockets as unknown as Map<string, IoSocket>;
+
+  for (const socketId of socketIds) {
+    if (socketId === disconnectedSocketId) continue;
+    const peerSocket = sockets.get(socketId);
+    if (!peerSocket || !peerSocket.connected) continue;
+    if (peerSocket.data?.user?.sub === userId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 function resolveWinnerOnAbandon(room: RuntimeRoom, abandonedUserId: string): string | null {
   const connected = room.players.filter((p) => p.connected && p.userId !== abandonedUserId);
   return connected.length > 0 ? connected[0].userId : null;
@@ -345,7 +369,7 @@ export function createSocketServer(
         },
         credentials: true
       },
-      transports: ["websocket", "polling"]
+      transports: ["polling", "websocket"]
     }
   ).of(SOCKET_NAMESPACE) as unknown as IoServer;
 
@@ -696,6 +720,10 @@ export function createSocketServer(
         if (!room) continue;
 
         if (room.status === "WAITING") {
+          if (hasOtherConnectedSocketForUser(namespace, room.id, userId, socket.id)) {
+            continue;
+          }
+
           const player = room.players.find((p) => p.userId === userId);
           if (!player) continue;
 
@@ -737,6 +765,10 @@ export function createSocketServer(
         }
 
         if (room.status === "PLAYING") {
+          if (hasOtherConnectedSocketForUser(namespace, room.id, userId, socket.id)) {
+            continue;
+          }
+
           const player = room.players.find((p) => p.userId === userId);
           if (!player) continue;
 
