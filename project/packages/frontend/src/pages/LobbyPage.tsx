@@ -58,22 +58,26 @@ export default function LobbyPage(): React.JSX.Element {
 
   const createRoom = async () => {
     if (!canCreate) return;
-    const response = await fetch(`${API_URL}/api/rooms`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form)
-    });
+    try {
+      const response = await fetch(`${API_URL}/api/rooms`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form)
+      });
 
-    if (!response.ok) {
-      const err = (await response.json()) as { message?: string };
-      setNotice(translateServerMessage(err.message ?? "Failed to create room"));
-      return;
+      if (!response.ok) {
+        const err = (await response.json()) as { message?: string };
+        setNotice(translateServerMessage(err.message ?? "Failed to create room"));
+        return;
+      }
+
+      const data = (await response.json()) as { id: string };
+      setNotice(null);
+      navigate(`/room/${data.id}`);
+    } catch {
+      setNotice("Ошибка сети при создании комнаты.");
     }
-
-    const data = (await response.json()) as { id: string };
-    setNotice(null);
-    navigate(`/room/${data.id}`);
   };
 
   const joinByRoomId = async (roomId: string) => {

@@ -6,6 +6,10 @@ function isLoopbackHost(hostname: string): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1";
 }
 
+function isFrontendDevPort(port: string): boolean {
+  return port === "5173" || port === "4173";
+}
+
 export function resolveApiBaseUrl(): string {
   const configured = (import.meta.env.VITE_API_URL as string | undefined)?.trim();
   if (configured) {
@@ -19,6 +23,9 @@ export function resolveApiBaseUrl(): string {
 
         // If app is opened from LAN/public host, ignore localhost API configs.
         if (!currentIsLoopback && configuredIsLoopback) {
+          if (isFrontendDevPort(window.location.port)) {
+            return `${window.location.protocol}//${window.location.hostname}:4000`;
+          }
           return trimTrailingSlash(window.location.origin);
         }
       } catch {
@@ -37,6 +44,10 @@ export function resolveApiBaseUrl(): string {
   const isLocalhost = isLoopbackHost(hostname);
 
   if (isLocalhost) {
+    return `${protocol}//${hostname}:4000`;
+  }
+
+  if (isFrontendDevPort(window.location.port)) {
     return `${protocol}//${hostname}:4000`;
   }
 
