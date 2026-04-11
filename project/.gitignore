@@ -1,0 +1,11 @@
+node_modules
+.env
+dist
+coverage
+*.log
+
+packages/backend/dev.db
+packages/backend/dev.db-journal
+
+.DS_Store
+.vscode

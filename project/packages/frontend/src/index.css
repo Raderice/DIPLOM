@@ -1,0 +1,65 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Unbounded:wght@500;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-background text-foreground antialiased;
+  margin: 0;
+  min-height: 100vh;
+  background-image:
+    radial-gradient(circle at 12% 0%, rgba(16, 185, 129, 0.26), transparent 42%),
+    radial-gradient(circle at 88% 18%, rgba(14, 165, 233, 0.2), transparent 35%),
+    linear-gradient(180deg, #f2fffd 0%, #e8f5fb 54%, #f5f9ff 100%);
+  background-attachment: fixed;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.32;
+  z-index: -1;
+}
+
+.animate-rise {
+  animation: rise-in 360ms ease-out both;
+}
+
+.animate-fade {
+  animation: fade-in 320ms ease-out both;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

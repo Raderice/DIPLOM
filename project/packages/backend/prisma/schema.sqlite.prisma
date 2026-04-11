@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  username      String         @unique
+  email         String         @unique
+  passwordHash  String
+  role          String         @default("USER")
+  tokenVersion  Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  ownedRooms    Room[]         @relation("RoomHost")
+  memberships   RoomMember[]
+  refreshTokens RefreshToken[]
+  wonSessions   GameSession[]  @relation("SessionWinner")
+}
+
+model Room {
+  id         String        @id @default(cuid())
+  name       String
+  gameType   String
+  status     String        @default("WAITING")
+  maxPlayers Int
+  isPublic   Boolean       @default(true)
+  inviteCode String        @unique
+  hostId     String
+  host       User          @relation("RoomHost", fields: [hostId], references: [id], onDelete: Cascade)
+  members    RoomMember[]
+  sessions   GameSession[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+}
+
+model RoomMember {
+  id             String    @id @default(cuid())
+  roomId         String
+  userId         String
+  ready          Boolean   @default(false)
+  joinedAt       DateTime  @default(now())
+  disconnectedAt DateTime?
+  room           Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+}
+
+model GameSession {
+  id        String    @id @default(cuid())
+  roomId    String
+  room      Room      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  winnerId  String?
+  winner    User?     @relation("SessionWinner", fields: [winnerId], references: [id], onDelete: SetNull)
+  log       String?
+}
+
+model RefreshToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  userAgent  String?
+  ipAddress  String?
+  createdAt  DateTime  @default(now())
+}

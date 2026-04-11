@@ -1,0 +1,25 @@
+FROM node:20-alpine AS deps
+WORKDIR /repo
+COPY package.json ./
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/backend/package.json ./packages/backend/package.json
+RUN npm install
+
+FROM node:20-alpine AS build
+WORKDIR /repo
+COPY --from=deps /repo/node_modules ./node_modules
+COPY tsconfig.base.json ./tsconfig.base.json
+COPY packages/shared ./packages/shared
+COPY packages/backend ./packages/backend
+RUN npm run build -w @board-games/shared && npm run prisma:generate -w @board-games/backend && npm run build -w @board-games/backend
+
+FROM node:20-alpine AS runtime
+WORKDIR /repo
+ENV NODE_ENV=production
+COPY --from=build /repo/node_modules ./node_modules
+COPY --from=build /repo/package.json ./package.json
+COPY --from=build /repo/packages/shared ./packages/shared
+COPY --from=build /repo/packages/backend/dist ./packages/backend/dist
+COPY --from=build /repo/packages/backend/prisma ./packages/backend/prisma
+EXPOSE 4000
+CMD ["node", "packages/backend/dist/index.js"]
