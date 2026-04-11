@@ -29,7 +29,7 @@ services:
       DATABASE_PROVIDER: ${DATABASE_PROVIDER:-postgresql}
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-boardgames}:${POSTGRES_PASSWORD:-boardgames}@postgres:5432/${POSTGRES_DB:-boardgames}?schema=public}
       CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost,http://127.0.0.1}
-    command: sh -c "npm run prisma:generate -w @board-games/backend && npm run prisma:push -w @board-games/backend && node packages/backend/dist/index.js"
+    command: sh -c "npm run prisma:generate --prefix packages/backend && npm run prisma:push --prefix packages/backend && node packages/backend/dist/index.js"
     depends_on:
       postgres:
         condition: service_healthy

@@ -23,5 +23,6 @@ COPY --from=build /repo/package.json ./package.json
 COPY --from=build /repo/packages/shared ./packages/shared
 COPY --from=build /repo/packages/backend/dist ./packages/backend/dist
 COPY --from=build /repo/packages/backend/prisma ./packages/backend/prisma
+COPY --from=build /repo/packages/backend/package.json ./packages/backend/package.json
 EXPOSE 4000
 CMD ["node", "packages/backend/dist/index.js"]
