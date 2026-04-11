@@ -8,6 +8,7 @@ RUN npm ci
 
 FROM node:20-alpine AS build
 WORKDIR /repo
+RUN apk add --no-cache openssl
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/package.json ./package.json
 COPY tsconfig.base.json ./tsconfig.base.json
@@ -18,6 +19,7 @@ RUN npm run build --prefix packages/shared && npm run prisma:generate --prefix p
 FROM node:20-alpine AS runtime
 WORKDIR /repo
 ENV NODE_ENV=production
+RUN apk add --no-cache openssl
 COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/package.json ./package.json
 COPY --from=build /repo/packages/shared ./packages/shared
