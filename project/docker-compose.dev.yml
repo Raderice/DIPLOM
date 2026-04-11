@@ -7,7 +7,11 @@ services:
       CLIENT_ORIGIN: http://localhost:5173
       DATABASE_PROVIDER: postgresql
       DATABASE_URL: postgresql://${POSTGRES_USER:-boardgames}:${POSTGRES_PASSWORD:-boardgames}@postgres:5432/${POSTGRES_DB:-boardgames}?schema=public
-    command: sh -c "npm install && npm run prisma:generate -w @board-games/backend && npm run dev -w @board-games/backend"
+    command: >-
+      sh -c "npm install &&
+      npm run prisma:generate --prefix packages/backend &&
+      npm run prisma:push --prefix packages/backend &&
+      npm run dev --prefix packages/backend"
     volumes:
       - ./:/repo
       - /repo/node_modules
@@ -20,7 +24,7 @@ services:
     environment:
       NODE_ENV: development
       VITE_API_URL: http://localhost:4000
-    command: sh -c "npm install && npm run dev -w @board-games/frontend -- --host 0.0.0.0 --port 5173"
+    command: sh -c "npm install && npm run dev --prefix packages/frontend -- --host 0.0.0.0 --port 5173"
     volumes:
       - ./:/repo
       - /repo/node_modules

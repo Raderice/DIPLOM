@@ -25,8 +25,18 @@ function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-function setCookies(res: Response, accessToken: string, refreshToken: string): void {
-  const secure = config.nodeEnv === "production";
+function isHttpsRequest(req: Request): boolean {
+  const forwardedProtoHeader = req.headers["x-forwarded-proto"];
+  const forwardedProto = Array.isArray(forwardedProtoHeader)
+    ? forwardedProtoHeader[0]
+    : forwardedProtoHeader;
+
+  return req.secure || (typeof forwardedProto === "string" && forwardedProto.split(",")[0]?.trim() === "https");
+}
+
+function setCookies(req: Request, res: Response, accessToken: string, refreshToken: string): void {
+  // In production behind plain HTTP (LAN), secure cookies would be dropped by browsers.
+  const secure = config.nodeEnv === "production" ? isHttpsRequest(req) : false;
   res.cookie("access_token", accessToken, {
     httpOnly: true,
     secure,
@@ -106,7 +116,7 @@ export function createAuthRouter(prisma: PrismaClient): Router {
       }
     });
 
-    setCookies(res, accessToken, refreshToken);
+    setCookies(req, res, accessToken, refreshToken);
 
     res.status(201).json({
       user: {
@@ -164,7 +174,7 @@ export function createAuthRouter(prisma: PrismaClient): Router {
       }
     });
 
-    setCookies(res, accessToken, refreshToken);
+    setCookies(req, res, accessToken, refreshToken);
 
     res.status(200).json({
       user: {
@@ -224,7 +234,7 @@ export function createAuthRouter(prisma: PrismaClient): Router {
         })
       ]);
 
-      setCookies(res, nextAccessToken, nextRefreshToken);
+      setCookies(req, res, nextAccessToken, nextRefreshToken);
 
       res.status(200).json({
         user: {
