@@ -16,7 +16,9 @@ Production-ready monorepo for a low-resource real-time browser platform with Che
 
 ## Environment
 
-Copy `.env.example` to `.env` and update secrets:
+For a quick Docker start (one command), `.env` is optional because compose has defaults.
+
+If you want custom secrets/origins, copy `.env.example` to `.env` and update values:
 
 ```bash
 cp .env.example .env
@@ -26,15 +28,15 @@ cp .env.example .env
 
 | Variable | Required | Description |
 |---|---|---|
-| `NODE_ENV` | yes | Runtime mode (`development` or `production`) |
-| `PORT` | yes | Backend port |
-| `CLIENT_ORIGIN` | yes | Allowed frontend origin(s), comma separated |
-| `DATABASE_PROVIDER` | yes | `postgresql` or `sqlite` |
-| `DATABASE_URL` | yes | Prisma connection string |
-| `JWT_ACCESS_SECRET` | yes | Access token secret |
-| `JWT_REFRESH_SECRET` | yes | Refresh token secret |
-| `ACCESS_TOKEN_TTL_MIN` | yes | Access token TTL (minutes) |
-| `REFRESH_TOKEN_TTL_DAYS` | yes | Refresh token TTL (days) |
+| `NODE_ENV` | optional | Runtime mode (`development` or `production`) |
+| `PORT` | optional | Backend port |
+| `CLIENT_ORIGIN` | optional | Allowed frontend origin(s), comma separated |
+| `DATABASE_PROVIDER` | optional | `postgresql` or `sqlite` |
+| `DATABASE_URL` | optional | Prisma connection string |
+| `JWT_ACCESS_SECRET` | optional | Access token secret |
+| `JWT_REFRESH_SECRET` | optional | Refresh token secret |
+| `ACCESS_TOKEN_TTL_MIN` | optional | Access token TTL (minutes) |
+| `REFRESH_TOKEN_TTL_DAYS` | optional | Refresh token TTL (days) |
 | `POSTGRES_DB` | docker | Postgres DB name |
 | `POSTGRES_USER` | docker | Postgres user |
 | `POSTGRES_PASSWORD` | docker | Postgres password |
@@ -365,6 +367,30 @@ The login page also exposes quick-fill presets via:
 
 ## Docker Run
 
+### One Command On Server
+
+If you cloned the project on a server and want to run everything with one command:
+
+```bash
+docker compose up -d --build
+```
+
+Then open:
+
+- `http://192.168.31.255`
+
+Notes:
+
+- Base `docker-compose.yml` is now production-oriented and can start without manual `.env` creation.
+- Backend auto-runs Prisma generate + db push on startup, so DB schema is initialized automatically.
+- If your server IP is different, override origin before start:
+
+```bash
+CLIENT_ORIGIN="http://YOUR_SERVER_IP" VITE_API_URL="http://YOUR_SERVER_IP" docker compose up -d --build
+```
+
+### Standard Docker Run
+
 ```bash
 docker compose up --build
 ```
@@ -381,6 +407,16 @@ Enable Redis profile:
 
 ```bash
 docker compose --profile redis up --build
+```
+
+### Development Compose Profile
+
+Development overrides were moved to `docker-compose.dev.yml`.
+
+Use this for local hot-reload dev via Docker:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 ```
 
 ## Prisma Migrations

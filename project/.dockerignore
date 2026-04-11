@@ -1,0 +1,27 @@
+# VCS
+.git
+.gitignore
+
+# Node artifacts
+node_modules
+**/node_modules
+npm-debug.log*
+
+# Build outputs
+**/dist
+**/.cache
+coverage
+
+# Local env/secrets
+.env
+.env.*
+!.env.example
+
+# Local runtime files
+**/*.log
+**/dev.db
+**/dev.db-journal
+
+# Editor/system
+.vscode
+.DS_Store
