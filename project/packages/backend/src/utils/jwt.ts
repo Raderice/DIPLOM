@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import type { JwtUserClaims } from "@board-games/shared";
 import { config } from "../config";
@@ -10,7 +11,8 @@ export function signAccessToken(claims: JwtUserClaims): string {
 
 export function signRefreshToken(claims: JwtUserClaims): string {
   return jwt.sign(claims, config.jwtRefreshSecret, {
-    expiresIn: `${config.refreshTokenTtlDays}d`
+    expiresIn: `${config.refreshTokenTtlDays}d`,
+    jwtid: randomUUID()
   });
 }
 
