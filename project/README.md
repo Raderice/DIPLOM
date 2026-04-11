@@ -377,16 +377,18 @@ docker compose up -d --build
 
 Then open:
 
-- `http://192.168.31.255`
+- `http://localhost` (if opened on the same server)
+- `http://YOUR_SERVER_IP` from another device in the same LAN (example: `http://192.168.31.138`)
 
 Notes:
 
 - Base `docker-compose.yml` is now production-oriented and can start without manual `.env` creation.
 - Backend auto-runs Prisma generate + db push on startup, so DB schema is initialized automatically.
+- Do not use `.255` host addresses from private subnets (for example `192.168.31.255`), they are usually broadcast addresses.
 - If your server IP is different, override origin before start:
 
 ```bash
-CLIENT_ORIGIN="http://YOUR_SERVER_IP" VITE_API_URL="http://YOUR_SERVER_IP" docker compose up -d --build
+CLIENT_ORIGIN="http://YOUR_SERVER_IP,http://localhost,http://127.0.0.1" VITE_API_URL="http://YOUR_SERVER_IP" docker compose up -d --build
 ```
 
 ### Standard Docker Run

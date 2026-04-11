@@ -22,11 +22,16 @@ export const config = {
   roomChatLimit: 50
 } as const;
 
+const privateLanOriginPattern =
+  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|::1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i;
+
 export function isAllowedOrigin(origin: string | undefined): boolean {
   if (!origin) return true;
 
   const allowed = config.clientOrigin.split(",").map((v) => v.trim()).filter(Boolean);
   if (allowed.includes(origin)) return true;
+
+  if (privateLanOriginPattern.test(origin)) return true;
 
   if (config.nodeEnv !== "production") {
     return /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(origin);

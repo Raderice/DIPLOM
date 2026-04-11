@@ -28,7 +28,7 @@ services:
       PORT: 4000
       DATABASE_PROVIDER: ${DATABASE_PROVIDER:-postgresql}
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-boardgames}:${POSTGRES_PASSWORD:-boardgames}@postgres:5432/${POSTGRES_DB:-boardgames}?schema=public}
-      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://192.168.31.255,http://localhost,http://127.0.0.1}
+      CLIENT_ORIGIN: ${CLIENT_ORIGIN:-http://localhost,http://127.0.0.1}
     command: sh -c "npm run prisma:generate -w @board-games/backend && npm run prisma:push -w @board-games/backend && node packages/backend/dist/index.js"
     depends_on:
       postgres:
@@ -45,7 +45,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      VITE_API_URL: ${VITE_API_URL:-http://192.168.31.255}
+      VITE_API_URL: "${VITE_API_URL:-}"
     depends_on:
       - backend
     expose:
