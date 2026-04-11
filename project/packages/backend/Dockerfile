@@ -1,17 +1,19 @@
 FROM node:20-alpine AS deps
 WORKDIR /repo
 COPY package.json ./
+COPY package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/package.json
 COPY packages/backend/package.json ./packages/backend/package.json
-RUN npm install
+RUN npm ci
 
 FROM node:20-alpine AS build
 WORKDIR /repo
 COPY --from=deps /repo/node_modules ./node_modules
+COPY --from=deps /repo/package.json ./package.json
 COPY tsconfig.base.json ./tsconfig.base.json
 COPY packages/shared ./packages/shared
 COPY packages/backend ./packages/backend
-RUN npm run build -w @board-games/shared && npm run prisma:generate -w @board-games/backend && npm run build -w @board-games/backend
+RUN npm run build --prefix packages/shared && npm run prisma:generate --prefix packages/backend && npm run build --prefix packages/backend
 
 FROM node:20-alpine AS runtime
 WORKDIR /repo

@@ -8,9 +8,8 @@
     "jsx": "react-jsx",
     "types": ["vite/client", "react", "react-dom"],
     "noEmit": true,
-    "baseUrl": "./src",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
