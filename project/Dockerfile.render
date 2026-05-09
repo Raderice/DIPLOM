@@ -40,6 +40,7 @@ COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/packages/shared ./packages/shared
 COPY --from=build /repo/packages/backend/dist ./packages/backend/dist
 COPY --from=build /repo/packages/backend/package.json ./packages/backend/package.json
+COPY --from=build /repo/packages/backend/prisma ./packages/backend/prisma
 COPY --from=build /repo/packages/frontend/dist /usr/share/nginx/html
 
 COPY nginx/render.conf.template /etc/nginx/templates/render.conf.template

@@ -24,7 +24,11 @@ http {
 EOF
 
 if [ "${RUN_MIGRATIONS:-}" = "true" ]; then
-  npm run prisma:migrate -w @board-games/backend
+  if [ "${DATABASE_PROVIDER:-postgresql}" = "sqlite" ]; then
+    /app/node_modules/.bin/prisma migrate deploy --schema /app/packages/backend/prisma/schema.sqlite.prisma
+  else
+    /app/node_modules/.bin/prisma migrate deploy --schema /app/packages/backend/prisma/schema.prisma
+  fi
 fi
 
 PORT=4000
