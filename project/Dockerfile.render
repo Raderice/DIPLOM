@@ -1,0 +1,47 @@
+# Build shared, backend, and frontend
+FROM node:20-alpine AS build
+WORKDIR /repo
+
+RUN apk add --no-cache openssl
+
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/package.json
+COPY packages/backend/package.json ./packages/backend/package.json
+COPY packages/frontend/package.json ./packages/frontend/package.json
+
+RUN npm ci
+
+COPY tsconfig.base.json ./
+COPY packages/shared ./packages/shared
+COPY packages/backend ./packages/backend
+COPY packages/frontend ./packages/frontend
+
+RUN npm run build -w @board-games/shared \
+  && npm run prisma:generate -w @board-games/backend \
+  && npm run build -w @board-games/backend \
+  && npm run build -w @board-games/frontend
+
+RUN mkdir -p /repo/packages/backend/dist/data \
+  && cp /repo/packages/backend/src/data/alias-words.json /repo/packages/backend/dist/data/alias-words.json
+
+# Runtime image
+FROM node:20-alpine AS runtime
+WORKDIR /app
+
+RUN apk add --no-cache nginx gettext
+
+ENV NODE_ENV=production
+
+COPY --from=build /repo/node_modules ./node_modules
+COPY --from=build /repo/packages/shared ./packages/shared
+COPY --from=build /repo/packages/backend/dist ./packages/backend/dist
+COPY --from=build /repo/packages/backend/package.json ./packages/backend/package.json
+COPY --from=build /repo/packages/frontend/dist /usr/share/nginx/html
+
+COPY nginx/render.conf.template /etc/nginx/templates/render.conf.template
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+EXPOSE 8080
+
+CMD ["/start.sh"]
