@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CreateRoomBody, RoomListItem } from "@board-games/shared";
+import { gamePlayerCountMessage, getGamePlayerLimits, validateGamePlayerCount } from "@board-games/shared";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
@@ -28,9 +29,18 @@ export default function LobbyPage(): React.JSX.Element {
 
   const canCreate = useMemo(() => {
     if (form.name.trim().length < 3) return false;
-    if (form.maxPlayers < 2 || form.maxPlayers > 4) return false;
-    return true;
+    return validateGamePlayerCount(form.gameType, form.maxPlayers).ok;
   }, [form]);
+
+  const playerLimits = useMemo(() => getGamePlayerLimits(form.gameType), [form.gameType]);
+
+  const gameBadges: Record<CreateRoomBody["gameType"], string> = {
+    chess: "CH",
+    checkers: "CK",
+    durak: "DK",
+    alias: "AL",
+    mafia: "MF"
+  };
 
   const fetchRooms = async () => {
     setLoading(true);
@@ -57,7 +67,10 @@ export default function LobbyPage(): React.JSX.Element {
   }, []);
 
   const createRoom = async () => {
-    if (!canCreate) return;
+    if (!canCreate) {
+      setNotice(translateServerMessage(gamePlayerCountMessage(form.gameType)));
+      return;
+    }
     try {
       const response = await fetch(`${API_URL}/api/rooms`, {
         method: "POST",
@@ -119,19 +132,22 @@ export default function LobbyPage(): React.JSX.Element {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
-      <header className="rounded-3xl border border-white/60 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-panel">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+      <header className="rounded-3xl border border-border bg-gradient-to-br from-[#1f2124] via-[#26282d] to-[#2f3237] p-6 shadow-panel">
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">Лобби настольных игр в реальном времени</h1>
-            <p className="mt-2 text-cyan-100">Создавайте комнату, приглашайте друзей и начинайте матч с любого устройства.</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted-foreground">Board Games Arena</p>
+            <h1 className="mt-2 font-display text-2xl font-semibold tracking-wide text-foreground md:text-3xl">
+              Лобби настольных игр в реальном времени
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              Создавайте комнаты, приглашайте друзей и начинайте матчи с мгновенной синхронизацией и чат‑поддержкой.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {user?.role === "admin" ? (
-              <Button variant="outline" className="border-white/40 bg-white/10 text-white" onClick={() => navigate("/admin")}>
-                Админ
-              </Button>
+              <Button variant="outline" onClick={() => navigate("/admin")}>Админ</Button>
             ) : null}
-            <Button variant="outline" className="border-white/40 bg-white/10 text-white" onClick={() => void logout()}>
+            <Button variant="outline" onClick={() => void logout()}>
               Выйти
             </Button>
           </div>
@@ -139,10 +155,10 @@ export default function LobbyPage(): React.JSX.Element {
       </header>
 
       {notice ? (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">{notice}</div>
+        <div className="rounded-xl border border-[#f2c94c]/50 bg-[#2f2a1b] p-3 text-sm text-[#f2c94c]">{notice}</div>
       ) : null}
 
-      <section className="grid gap-6 md:grid-cols-2">
+      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <Card>
           <CardHeader>
             <CardTitle>Создать комнату</CardTitle>
@@ -155,35 +171,37 @@ export default function LobbyPage(): React.JSX.Element {
             />
 
             <select
-              className="h-11 rounded-xl border border-input bg-white/95 px-3 text-sm"
+              className="h-11 rounded-xl border border-input bg-input px-3 text-sm text-foreground"
               value={form.gameType}
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
-                  gameType: e.target.value as "chess" | "checkers" | "durak",
-                  maxPlayers: e.target.value === "durak" ? Math.max(prev.maxPlayers, 2) : 2
+                  gameType: e.target.value as CreateRoomBody["gameType"],
+                  maxPlayers: getGamePlayerLimits(e.target.value as CreateRoomBody["gameType"]).min
                 }))
               }
             >
               <option value="chess">Шахматы</option>
               <option value="checkers">Шашки</option>
               <option value="durak">Дурак</option>
+              <option value="alias">Alias</option>
+              <option value="mafia">Мафия</option>
             </select>
 
             <Input
               type="number"
-              min={2}
-              max={4}
+              min={playerLimits.min}
+              max={playerLimits.max}
               value={form.maxPlayers}
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
-                  maxPlayers: Math.max(2, Math.min(4, Number(e.target.value)))
+                  maxPlayers: Math.max(playerLimits.min, Math.min(playerLimits.max, Number(e.target.value)))
                 }))
               }
             />
 
-            <label className="inline-flex items-center gap-2 text-sm">
+            <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
               <input
                 type="checkbox"
                 checked={form.isPublic}
@@ -224,22 +242,27 @@ export default function LobbyPage(): React.JSX.Element {
           </Button>
         </CardHeader>
         <CardContent className="space-y-2">
-          {loading ? <div className="text-sm text-slate-500">Загрузка комнат...</div> : null}
+          {loading ? <div className="text-sm text-muted-foreground">Загрузка комнат...</div> : null}
 
           {!loading && rooms.length === 0 ? (
-            <div className="text-sm text-slate-500">Пока нет публичных комнат. Создайте первую.</div>
+            <div className="text-sm text-muted-foreground">Пока нет публичных комнат. Создайте первую.</div>
           ) : null}
 
-          <ul className="space-y-2">
+          <ul className="grid gap-3 md:grid-cols-2">
             {rooms.map((room) => (
               <li
                 key={room.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-100 bg-white/80 px-3 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-[#23262a] px-4 py-4"
               >
-                <div>
-                  <div className="font-medium">{room.name}</div>
-                  <div className="text-sm text-slate-600">
-                    {gameTypeRu(room.gameType)} • {room.currentPlayers}/{room.maxPlayers} • {roomStatusRu(room.status)}
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#f2c94c]/50 bg-[#2b2418] text-xs font-semibold text-[#f2c94c]">
+                    {gameBadges[room.gameType]}
+                  </div>
+                  <div>
+                    <div className="font-semibold text-foreground">{room.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {gameTypeRu(room.gameType)} • {room.currentPlayers}/{room.maxPlayers} • {roomStatusRu(room.status)}
+                    </div>
                   </div>
                 </div>
                 <Button

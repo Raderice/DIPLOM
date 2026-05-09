@@ -16,6 +16,7 @@ import { useGameStore } from "../store/gameStore";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { gameTypeRu, roomStatusRu, translateServerMessage } from "../lib/i18n";
+import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
 
 export default function RoomPage(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
@@ -34,7 +35,9 @@ export default function RoomPage(): React.JSX.Element {
   const canStart = useMemo(() => {
     if (!room) return false;
     if (room.hostId !== me) return false;
-    return room.players.filter((p) => p.connected).every((p) => p.ready);
+    const connectedPlayers = room.players.filter((p) => p.connected);
+    if (!validateGamePlayerCount(room.gameType, connectedPlayers.length).ok) return false;
+    return connectedPlayers.every((p) => p.ready);
   }, [room, me]);
 
   useEffect(() => {
@@ -132,6 +135,14 @@ export default function RoomPage(): React.JSX.Element {
   };
 
   const onStart = async () => {
+    if (room) {
+      const connectedPlayers = room.players.filter((p) => p.connected);
+      const check = validateGamePlayerCount(room.gameType, connectedPlayers.length);
+      if (!check.ok) {
+        setConnectionNotice(translateServerMessage(check.message ?? gamePlayerCountMessage(room.gameType)));
+        return;
+      }
+    }
     const response = await startRoom(roomId);
     if (!response.ok) {
       setConnectionNotice(translateServerMessage(response.error));
@@ -157,10 +168,10 @@ export default function RoomPage(): React.JSX.Element {
           <CardTitle>{room?.name ?? "Загрузка комнаты..."}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <p>ID комнаты: {roomId}</p>
+          <p className="text-muted-foreground">ID комнаты: {roomId}</p>
           <p>Игра: {room ? gameTypeRu(room.gameType) : "-"}</p>
           <p>Статус: {room ? roomStatusRu(room.status) : roomStatusRu("WAITING")}</p>
-          <p>Код приглашения: {room?.inviteCode ?? "-"}</p>
+          <p className="text-muted-foreground">Код приглашения: {room?.inviteCode ?? "-"}</p>
         </CardContent>
       </Card>
 
@@ -171,12 +182,12 @@ export default function RoomPage(): React.JSX.Element {
         <CardContent>
           <ul className="space-y-2">
             {(room?.players ?? []).map((player) => (
-              <li key={player.userId} className="rounded-xl border border-cyan-100 bg-white/80 px-3 py-2 text-sm">
+              <li key={player.userId} className="rounded-xl border border-border bg-[#23262a] px-3 py-2 text-sm">
                 <div className="font-medium">
                   {player.username}
                   {room?.hostId === player.userId ? " (хост)" : ""}
                 </div>
-                <div className="text-slate-600">
+                <div className="text-muted-foreground">
                   {player.connected ? "в сети" : "не в сети"} • {player.ready ? "готов" : "не готов"}
                 </div>
               </li>
@@ -194,7 +205,9 @@ export default function RoomPage(): React.JSX.Element {
       </div>
 
       {connectionNotice ? (
-        <div className="rounded-md border border-sky-300 bg-sky-50 p-3 text-sm text-sky-900">{connectionNotice}</div>
+        <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-sm text-[#f2c94c]">
+          {connectionNotice}
+        </div>
       ) : null}
     </main>
   );

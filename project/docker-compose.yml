@@ -54,7 +54,7 @@ services:
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      VITE_API_URL: "${VITE_API_URL:-}"
+      VITE_API_URL: "${VITE_API_URL:-http://localhost}"
     depends_on:
       - backend
     expose:

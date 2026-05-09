@@ -19,7 +19,7 @@ export const SOCKET_EVENTS = {
 
 export type Role = "user" | "admin";
 export type RoomStatus = "WAITING" | "PLAYING" | "FINISHED";
-export type GameType = "chess" | "checkers" | "durak";
+export type GameType = "chess" | "checkers" | "durak" | "alias" | "mafia";
 export type ISODateString = string;
 
 export interface JwtUserClaims {
@@ -161,8 +161,105 @@ export interface DurakPlayerViewState extends BaseGameState {
   reason: string | null;
 }
 
-export type GameState = ChessState | CheckersState | DurakPlayerViewState;
-export type ServerGameState = ChessState | CheckersState | DurakState;
+export interface AliasTeam {
+  id: string;
+  name: string;
+  playerIds: string[];
+  score: number;
+}
+
+export type AliasRoundStatus = "SETUP" | "ROUND" | "ENDED";
+
+export interface AliasState extends BaseGameState {
+  gameType: "alias";
+  teams: AliasTeam[];
+  currentTeamId: string;
+  currentTeamIndex: number;
+  round: number;
+  pointsToWin: number;
+  roundDurationSec: number;
+  roundEndsAtMs: number | null;
+  explainerId: string | null;
+  activeWord: string | null;
+  deckCount: number;
+  discardCount: number;
+  status: AliasRoundStatus;
+  winnerTeamId: string | null;
+  reason: string | null;
+}
+
+export interface AliasServerState extends BaseGameState {
+  gameType: "alias";
+  teams: AliasTeam[];
+  currentTeamId: string;
+  currentTeamIndex: number;
+  round: number;
+  pointsToWin: number;
+  roundDurationSec: number;
+  roundEndsAtMs: number | null;
+  explainerId: string | null;
+  activeWord: string | null;
+  deck: string[];
+  discard: string[];
+  status: AliasRoundStatus;
+  winnerTeamId: string | null;
+  reason: string | null;
+}
+
+export type MafiaRole = "mafia" | "civilian" | "doctor" | "sheriff";
+export type MafiaPhase = "night" | "day" | "ended";
+
+export interface MafiaPlayerState {
+  userId: string;
+  username: string;
+  role: MafiaRole;
+  alive: boolean;
+}
+
+export interface MafiaPlayerView {
+  userId: string;
+  username: string;
+  alive: boolean;
+  role: MafiaRole | null;
+  isSelf: boolean;
+}
+
+export interface MafiaSheriffResult {
+  targetId: string;
+  role: MafiaRole;
+}
+
+export interface MafiaState extends BaseGameState {
+  gameType: "mafia";
+  phase: MafiaPhase;
+  players: MafiaPlayerView[];
+  day: number;
+  night: number;
+  dayVotes: Record<string, string>;
+  lastEliminatedId: string | null;
+  winner: "mafia" | "civilians" | null;
+  reason: string | null;
+  sheriffResult: MafiaSheriffResult | null;
+}
+
+export interface MafiaServerState extends BaseGameState {
+  gameType: "mafia";
+  phase: MafiaPhase;
+  players: MafiaPlayerState[];
+  day: number;
+  night: number;
+  dayVotes: Record<string, string>;
+  nightVotes: Record<string, string>;
+  doctorSaveId: string | null;
+  sheriffCheckId: string | null;
+  sheriffResult: { userId: string; result: MafiaSheriffResult } | null;
+  lastEliminatedId: string | null;
+  winner: "mafia" | "civilians" | null;
+  reason: string | null;
+}
+
+export type GameState = ChessState | CheckersState | DurakPlayerViewState | AliasState | MafiaState;
+export type ServerGameState = ChessState | CheckersState | DurakState | AliasServerState | MafiaServerState;
 
 export interface RoomRuntimeState {
   id: string;
@@ -265,7 +362,25 @@ export type DurakMovePayload =
   | DurakTakePayload
   | DurakPassPayload;
 
-export type GameMovePayload = ChessMovePayload | CheckersMovePayload | DurakMovePayload;
+export interface AliasMovePayload {
+  gameType: "alias";
+  roomId: string;
+  action: "startRound" | "guess" | "skip" | "endRound";
+}
+
+export interface MafiaMovePayload {
+  gameType: "mafia";
+  roomId: string;
+  action: "night:mafia" | "night:doctor" | "night:sheriff" | "night:resolve" | "day:vote" | "day:resolve";
+  targetId?: string;
+}
+
+export type GameMovePayload =
+  | ChessMovePayload
+  | CheckersMovePayload
+  | DurakMovePayload
+  | AliasMovePayload
+  | MafiaMovePayload;
 
 export interface GameOverPayload {
   roomId: string;

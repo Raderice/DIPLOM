@@ -4,6 +4,8 @@ export function gameTypeRu(gameType: GameType | string): string {
   if (gameType === "chess" || gameType === "CHESS") return "Шахматы";
   if (gameType === "checkers" || gameType === "CHECKERS") return "Шашки";
   if (gameType === "durak" || gameType === "DURAK") return "Дурак";
+  if (gameType === "alias" || gameType === "ALIAS") return "Alias";
+  if (gameType === "mafia" || gameType === "MAFIA") return "Мафия";
   return gameType;
 }
 
@@ -63,7 +65,29 @@ export function translateServerMessage(message: string): string {
     [/checkmate/i, "мат"],
     [/stalemate/i, "пат"],
     [/draw/i, "ничья"],
-    [/timeout/i, "время вышло"]
+    [/timeout/i, "время вышло"],
+    [/chess requires exactly 2 players/i, "Шахматы рассчитаны на 2 игроков. Измените количество игроков."],
+    [/checkers requires exactly 2 players/i, "Шашки рассчитаны на 2 игроков. Измените количество игроков."],
+    [/durak supports 2 to 4 players/i, "Дурак поддерживает от 2 до 4 игроков. Измените количество игроков."],
+    [/alias requires 4 to 12 players/i, "Alias поддерживает от 4 до 12 игроков. Измените количество игроков."],
+    [/mafia requires 6 to 15 players/i, "Мафия поддерживает от 6 до 15 игроков. Измените количество игроков."],
+    [/alias round timed out/i, "Раунд Alias завершен по времени."],
+    [/alias round already running/i, "Раунд Alias уже идет."],
+    [/alias game already finished/i, "Игра Alias уже завершена."],
+    [/alias round is not active/i, "Раунд Alias не активен."],
+    [/alias requires at least 4 players/i, "Alias требует минимум 4 игроков."],
+    [/mafia requires at least 6 players/i, "Мафия требует минимум 6 игроков."],
+    [/mafia expects night actions/i, "Сейчас ночь. Доступны ночные действия."],
+    [/mafia expects day vote/i, "Сейчас день. Доступно дневное голосование."],
+    [/only mafia can vote at night/i, "Ночной выбор доступен только мафии."],
+    [/only doctor can save/i, "Лечение доступно только доктору."],
+    [/only sheriff can investigate/i, "Проверка доступна только шерифу."],
+    [/target is required/i, "Нужно выбрать цель."],
+    [/target is not alive/i, "Цель выбыла из игры."],
+    [/player is not alive/i, "Игрок выбыл из игры."],
+    [/mafia:mafia/i, "Победа мафии."],
+    [/mafia:civilians/i, "Победа мирных жителей."],
+    [/alias:team/i, "Победа команды в Alias."]
   ];
 
   for (const [pattern, translation] of dictionary) {

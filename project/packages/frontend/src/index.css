@@ -1,11 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Unbounded:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;600;700;900&family=Cinzel:wght@500;700&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: light;
+  color-scheme: dark;
+  --color-bg: #2b2d30;
+  --color-fg: #f2f2f2;
+  --color-card: #1f2124;
+  --color-card-fg: #f2f2f2;
+  --color-border: #3a3d42;
+  --color-input: #24262a;
+  --color-ring: #f2c94c;
+  --color-primary: #f2c94c;
+  --color-on-primary: #1a1a1a;
+  --color-secondary: #3b7a57;
+  --color-on-secondary: #f2f2f2;
+  --color-muted: #2f3236;
+  --color-muted-fg: #a7abb2;
+  --color-danger: #d35d5d;
+  --board-light: #f0d9b5;
+  --board-dark: #b58863;
 }
 
 body {
@@ -13,9 +29,9 @@ body {
   margin: 0;
   min-height: 100vh;
   background-image:
-    radial-gradient(circle at 12% 0%, rgba(16, 185, 129, 0.26), transparent 42%),
-    radial-gradient(circle at 88% 18%, rgba(14, 165, 233, 0.2), transparent 35%),
-    linear-gradient(180deg, #f2fffd 0%, #e8f5fb 54%, #f5f9ff 100%);
+    radial-gradient(circle at 8% 12%, rgba(242, 201, 76, 0.12), transparent 40%),
+    radial-gradient(circle at 90% 18%, rgba(90, 135, 100, 0.18), transparent 45%),
+    linear-gradient(180deg, #2b2d30 0%, #24262a 60%, #1e2023 100%);
   background-attachment: fixed;
 }
 
@@ -29,11 +45,19 @@ body::before {
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(to right, rgba(15, 23, 42, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(15, 23, 42, 0.03) 1px, transparent 1px);
-  background-size: 48px 48px;
-  opacity: 0.32;
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(45deg, rgba(245, 215, 161, 0.05) 25%, transparent 25%, transparent 50%, rgba(245, 215, 161, 0.05) 50%, rgba(245, 215, 161, 0.05) 75%, transparent 75%, transparent);
+  background-size: 120px 120px, 120px 120px, 140px 140px;
+  opacity: 0.22;
   z-index: -1;
+}
+
+button,
+input,
+select,
+textarea {
+  touch-action: manipulation;
 }
 
 .animate-rise {

@@ -70,12 +70,12 @@ export default function AdminPage(): React.JSX.Element {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? <p className="text-sm text-slate-500">Загрузка...</p> : null}
+          {loading ? <p className="text-sm text-muted-foreground">Загрузка...</p> : null}
 
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               <thead>
-                <tr className="border-b text-left">
+                <tr className="border-b border-border text-left text-muted-foreground">
                   <th className="p-2">ID</th>
                   <th className="p-2">Игра</th>
                   <th className="p-2">Игроки</th>
@@ -86,7 +86,7 @@ export default function AdminPage(): React.JSX.Element {
               </thead>
               <tbody>
                 {rooms.map((room) => (
-                  <tr key={room.id} className="border-b">
+                  <tr key={room.id} className="border-b border-border">
                     <td className="p-2 font-mono text-xs">{room.id}</td>
                     <td className="p-2">{gameTypeRu(room.game)}</td>
                     <td className="p-2">{room.players}</td>

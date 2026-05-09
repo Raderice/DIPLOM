@@ -20,10 +20,12 @@ FROM node:20-alpine AS runtime
 WORKDIR /repo
 ENV NODE_ENV=production
 RUN apk add --no-cache openssl
+RUN mkdir -p /repo/packages/backend/dist/data
 COPY --from=build /repo/node_modules ./node_modules
 COPY --from=build /repo/package.json ./package.json
 COPY --from=build /repo/packages/shared ./packages/shared
 COPY --from=build /repo/packages/backend/dist ./packages/backend/dist
+COPY --from=build /repo/packages/backend/src/data/alias-words.json ./packages/backend/dist/data/alias-words.json
 COPY --from=build /repo/packages/backend/prisma ./packages/backend/prisma
 COPY --from=build /repo/packages/backend/package.json ./packages/backend/package.json
 EXPOSE 4000

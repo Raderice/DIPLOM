@@ -12,9 +12,9 @@ import type {
   JwtUserClaims,
   PlayerInRoom,
   RoomStatus,
-  ServerToClientEvents
+  ServerToClientEvents,
 } from "@board-games/shared";
-import { SOCKET_NAMESPACE } from "@board-games/shared";
+import { SOCKET_NAMESPACE, validateGamePlayerCount } from "@board-games/shared";
 import { config, isAllowedOrigin } from "../config";
 import type { RuntimeRoom } from "../store/gameStore";
 import { getRoom, removeRoom, setRoom } from "../store/gameStore";
@@ -23,6 +23,8 @@ import { toClientGameState, toClientRoom, parseCookie } from "./roomHandlers";
 import { applyChessMove, createInitialChessState } from "./games/chess";
 import { applyCheckersMove, createInitialCheckersState } from "./games/checkers";
 import { applyDurakMove, createInitialDurakState } from "./games/durak";
+import { applyAliasMove, createInitialAliasState } from "./games/alias";
+import { applyMafiaMove, createInitialMafiaState } from "./games/mafia";
 
 interface SocketData {
   user: JwtUserClaims;
@@ -46,9 +48,11 @@ function fail<T>(error: string): Ack<T> {
   return { ok: false, error };
 }
 
-function normalizeGameType(value: string): "chess" | "checkers" | "durak" {
+function normalizeGameType(value: string): "chess" | "checkers" | "durak" | "alias" | "mafia" {
   if (value === "CHESS" || value === "chess") return "chess";
   if (value === "CHECKERS" || value === "checkers") return "checkers";
+  if (value === "ALIAS" || value === "alias") return "alias";
+  if (value === "MAFIA" || value === "mafia") return "mafia";
   return "durak";
 }
 
@@ -229,7 +233,7 @@ async function closeWaitingRoomByHostLeave(
   await prisma.room.delete({ where: { id: room.id } }).catch(() => undefined);
 }
 
-function makeInitialState(gameType: "chess" | "checkers" | "durak", players: PlayerInRoom[]) {
+function makeInitialState(gameType: "chess" | "checkers" | "durak" | "alias" | "mafia", players: PlayerInRoom[]) {
   const pendingPlayer: PlayerInRoom = {
     userId: "__pending_player__",
     username: "Pending",
@@ -239,13 +243,21 @@ function makeInitialState(gameType: "chess" | "checkers" | "durak", players: Pla
     joinedAt: nowIso()
   };
 
-  const readyPlayers =
-    players.length >= 2
-      ? players
-      : [...players, pendingPlayer];
+  const withPending = (minPlayers: number): PlayerInRoom[] => {
+    if (players.length >= minPlayers) return players;
+    const result = [...players];
+    while (result.length < minPlayers) {
+      result.push({ ...pendingPlayer, userId: `${pendingPlayer.userId}-${result.length}` });
+    }
+    return result;
+  };
+
+  const readyPlayers = withPending(2);
 
   if (gameType === "chess") return createInitialChessState(readyPlayers);
   if (gameType === "checkers") return createInitialCheckersState(readyPlayers);
+  if (gameType === "alias") return createInitialAliasState(withPending(4));
+  if (gameType === "mafia") return createInitialMafiaState(withPending(6));
   return createInitialDurakState(readyPlayers);
 }
 
@@ -575,6 +587,12 @@ export function createSocketServer(
           return;
         }
 
+        const playerCountCheck = validateGamePlayerCount(room.gameType, connectedPlayers.length);
+        if (!playerCountCheck.ok) {
+          ack(fail(playerCountCheck.message ?? "Invalid player count for game"));
+          return;
+        }
+
         if (!connectedPlayers.every((p) => p.ready)) {
           ack(fail("All connected players must be ready"));
           return;
@@ -638,6 +656,28 @@ export function createSocketServer(
           }
         } else if (payload.gameType === "durak" && room.state.gameType === "durak") {
           const result = applyDurakMove(room.state, payload, playerId);
+          if (!result.ok) {
+            ack(fail(result.error));
+            return;
+          }
+          room.state = result.state;
+          if (result.over) {
+            room.status = "FINISHED";
+            over = { roomId: room.id, winnerId: result.over.winnerId, reason: result.over.reason };
+          }
+        } else if (payload.gameType === "alias" && room.state.gameType === "alias") {
+          const result = applyAliasMove(room.state, payload, playerId, Date.now());
+          if (!result.ok) {
+            ack(fail(result.error));
+            return;
+          }
+          room.state = result.state;
+          if (result.over) {
+            room.status = "FINISHED";
+            over = { roomId: room.id, winnerId: result.over.winnerId, reason: result.over.reason };
+          }
+        } else if (payload.gameType === "mafia" && room.state.gameType === "mafia") {
+          const result = applyMafiaMove(room.state, payload, playerId);
           if (!result.ok) {
             ack(fail(result.error));
             return;

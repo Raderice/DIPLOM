@@ -22,10 +22,13 @@ import { useGameStore } from "../store/gameStore";
 import { ChessGame } from "../games/Chess";
 import { CheckersGame } from "../games/Checkers";
 import { DurakGame } from "../games/Durak";
+import { AliasGame } from "../games/Alias";
+import { MafiaGame } from "../games/Mafia";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { roomStatusRu, translateServerMessage } from "../lib/i18n";
+import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
 
 export default function GamePage(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
@@ -205,6 +208,14 @@ export default function GamePage(): React.JSX.Element {
   };
 
   const onStart = async () => {
+    if (room) {
+      const connectedPlayers = room.players.filter((p) => p.connected);
+      const check = validateGamePlayerCount(room.gameType, connectedPlayers.length);
+      if (!check.ok) {
+        setActionNotice(translateServerMessage(check.message ?? gamePlayerCountMessage(room.gameType)));
+        return;
+      }
+    }
     const response = await startRoom(roomId);
     if (!response.ok) {
       setActionNotice(translateServerMessage(response.error));
@@ -229,7 +240,9 @@ export default function GamePage(): React.JSX.Element {
     }
     if (room.gameType === "chess") return <ChessGame />;
     if (room.gameType === "checkers") return <CheckersGame />;
-    return <DurakGame />;
+    if (room.gameType === "durak") return <DurakGame />;
+    if (room.gameType === "alias") return <AliasGame />;
+    return <MafiaGame />;
   };
 
   const me = window.localStorage.getItem("user_id") ?? "";
@@ -240,14 +253,16 @@ export default function GamePage(): React.JSX.Element {
     <main className="mx-auto grid max-w-7xl gap-4 p-4 md:p-6 lg:grid-cols-[1fr_320px]">
       <section className="space-y-4">
         <Card className="overflow-hidden">
-          <div className="border-b border-cyan-100 bg-gradient-to-r from-teal-50 via-cyan-50 to-sky-50 px-6 py-4">
-            <h2 className="font-display text-lg font-bold text-slate-800">{room?.name ?? "Загрузка комнаты..."}</h2>
+          <div className="border-b border-border bg-[#23262a] px-6 py-4">
+            <h2 className="font-display text-lg font-semibold tracking-wide text-foreground">
+              {room?.name ?? "Загрузка комнаты..."}
+            </h2>
           </div>
           <CardHeader>
             <CardTitle>Управление матчем</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="rounded-lg border border-cyan-100 bg-cyan-50/60 px-3 py-2 text-sm text-slate-700">
+            <p className="rounded-lg border border-border bg-[#23262a] px-3 py-2 text-sm text-muted-foreground">
               Комната: {roomId} | Статус: {roomStatusRu(room?.status ?? "WAITING")} | Сокет: {connected ? "подключен" : "отключен"}
             </p>
 
@@ -260,19 +275,21 @@ export default function GamePage(): React.JSX.Element {
             </div>
 
             {gameOverNotice ? (
-              <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-sm text-[#f2c94c]">
                 {gameOverNotice}
               </div>
             ) : null}
 
             {connectionNotice ? (
-              <div className="rounded-md border border-sky-300 bg-sky-50 p-3 text-sm text-sky-900">
+              <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-sm text-[#f2c94c]">
                 {connectionNotice}
               </div>
             ) : null}
 
             {actionNotice ? (
-              <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-sm text-rose-900">{actionNotice}</div>
+              <div className="rounded-md border border-[#d35d5d]/40 bg-[#2c2020] p-3 text-sm text-[#d35d5d]">
+                {actionNotice}
+              </div>
             ) : null}
           </CardContent>
         </Card>
@@ -288,12 +305,12 @@ export default function GamePage(): React.JSX.Element {
           <CardContent>
             <ul className="space-y-2">
               {(room?.players ?? []).map((p) => (
-                <li key={p.userId} className="rounded-xl border border-cyan-100 bg-white/80 px-3 py-2 text-sm">
+                <li key={p.userId} className="rounded-xl border border-border bg-[#23262a] px-3 py-2 text-sm">
                   <div className="font-medium">
                     {p.username}
                     {room?.hostId === p.userId ? " (хост)" : ""}
                   </div>
-                  <div className="text-slate-600">
+                  <div className="text-muted-foreground">
                     {p.connected ? "в сети" : "не в сети"} | {p.ready ? "готов" : "не готов"}
                   </div>
                 </li>
@@ -307,7 +324,7 @@ export default function GamePage(): React.JSX.Element {
             <CardTitle>Чат</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 space-y-2 overflow-y-auto rounded-xl border border-cyan-100 bg-white/85 p-2">
+            <div className="h-64 space-y-2 overflow-y-auto rounded-xl border border-border bg-[#1f2124] p-2">
               {chat.map((m) => (
                 <div key={m.id} className="text-sm">
                   <span className="font-semibold">{m.username}: </span>

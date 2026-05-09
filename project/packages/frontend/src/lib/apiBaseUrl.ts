@@ -44,7 +44,10 @@ export function resolveApiBaseUrl(): string {
   const isLocalhost = isLoopbackHost(hostname);
 
   if (isLocalhost) {
-    return `${protocol}//${hostname}:4000`;
+    if (isFrontendDevPort(window.location.port)) {
+      return `${protocol}//${hostname}:4000`;
+    }
+    return trimTrailingSlash(origin);
   }
 
   if (isFrontendDevPort(window.location.port)) {

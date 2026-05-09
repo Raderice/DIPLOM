@@ -2,6 +2,7 @@ import { customAlphabet } from "nanoid";
 import { Router, type Response } from "express";
 import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
 import type { RuntimeRoom } from "../store/gameStore";
 import { requireAuth, type AuthRequest } from "../middleware/auth";
 
@@ -9,9 +10,18 @@ const inviteCodeGenerator = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6
 
 const createRoomSchema = z.object({
   name: z.string().min(3).max(64),
-  gameType: z.enum(["chess", "checkers", "durak"]),
-  maxPlayers: z.number().int().min(2).max(4),
+  gameType: z.enum(["chess", "checkers", "durak", "alias", "mafia"]),
+  maxPlayers: z.number().int().min(2).max(15),
   isPublic: z.boolean()
+}).superRefine((data, ctx) => {
+  const validation = validateGamePlayerCount(data.gameType, data.maxPlayers);
+  if (!validation.ok) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: validation.message ?? gamePlayerCountMessage(data.gameType),
+      path: ["maxPlayers"]
+    });
+  }
 });
 
 const joinCodeSchema = z.object({
@@ -20,9 +30,13 @@ const joinCodeSchema = z.object({
 
 type ForceCloseRoomFn = (roomId: string, reason?: string) => Promise<void>;
 
-function toDbGameType(gameType: "chess" | "checkers" | "durak"): "CHESS" | "CHECKERS" | "DURAK" {
+function toDbGameType(
+  gameType: "chess" | "checkers" | "durak" | "alias" | "mafia"
+): "CHESS" | "CHECKERS" | "DURAK" | "ALIAS" | "MAFIA" {
   if (gameType === "chess") return "CHESS";
   if (gameType === "checkers") return "CHECKERS";
+  if (gameType === "alias") return "ALIAS";
+  if (gameType === "mafia") return "MAFIA";
   return "DURAK";
 }
 

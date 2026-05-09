@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Layer, Rect, Stage, Text, Group } from "react-konva";
 import type { DurakMovePayload, DurakPlayerViewState } from "@board-games/shared";
 import { emitGameMove } from "../socket/client";
@@ -37,6 +37,9 @@ export function DurakGame(): React.JSX.Element {
   const room = useGameStore((s) => s.room);
   const gameState = useGameStore((s) => s.gameState);
 
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const [tableScale, setTableScale] = useState(1);
+
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [selectedPairId, setSelectedPairId] = useState<string | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
@@ -45,6 +48,18 @@ export function DurakGame(): React.JSX.Element {
     if (!gameState || gameState.gameType !== "durak") return null;
     return gameState as DurakPlayerViewState;
   }, [gameState]);
+
+  useEffect(() => {
+    if (!boardRef.current) return;
+    const update = () => {
+      const width = boardRef.current?.clientWidth ?? TABLE_W;
+      setTableScale(Math.max(0.3, Math.min(1, width / TABLE_W)));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(boardRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   if (!room || !state) {
     return <div className="rounded-lg border p-4">Состояние партии в дурака недоступно.</div>;
@@ -212,10 +227,11 @@ export function DurakGame(): React.JSX.Element {
   return (
     <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
       <Card>
-        <CardContent className="overflow-auto p-3">
-          <Stage width={TABLE_W} height={TABLE_H}>
+        <CardContent className="p-3">
+          <div ref={boardRef} className="w-full touch-none">
+            <Stage width={TABLE_W * tableScale} height={TABLE_H * tableScale} scaleX={tableScale} scaleY={tableScale}>
             <Layer>
-              <Rect x={0} y={0} width={TABLE_W} height={TABLE_H} fill="#115e59" cornerRadius={16} />
+              <Rect x={0} y={0} width={TABLE_W} height={TABLE_H} fill="#1f3a2c" cornerRadius={18} />
 
               <Rect
                 x={TABLE_ZONE.x}
@@ -223,17 +239,17 @@ export function DurakGame(): React.JSX.Element {
                 width={TABLE_ZONE.width}
                 height={TABLE_ZONE.height}
                 cornerRadius={12}
-                stroke="#99f6e4"
+                stroke="#f2c94c"
                 strokeWidth={2}
                 dash={[10, 8]}
-                opacity={0.65}
+                opacity={0.7}
               />
               <Text
                 x={TABLE_ZONE.x + 8}
                 y={TABLE_ZONE.y + 8}
                 text={canDefendByDrag ? "Перетащите карту для защиты" : "Перетащите карту для атаки"}
                 fontSize={14}
-                fill="#ccfbf1"
+                fill="#f6e6b6"
               />
 
               <Text
@@ -241,7 +257,7 @@ export function DurakGame(): React.JSX.Element {
                 y={14}
                 text={`Козырь: ${suitSymbol(state.trumpSuit)}  |  Колода: ${state.deckCount}`}
                 fontSize={20}
-                fill="#ecfeff"
+                fill="#f8f1dd"
                 fontStyle="bold"
               />
               <Text
@@ -249,7 +265,7 @@ export function DurakGame(): React.JSX.Element {
                 y={42}
                 text={`Фаза: ${durakPhaseRu(state.phase)}  |  Ход: ${state.turnPlayerId === me ? "вы" : state.turnPlayerId}`}
                 fontSize={16}
-                fill="#ccfbf1"
+                fill="#d9cba4"
               />
 
               {state.table.map((pair, idx) => {
@@ -263,9 +279,9 @@ export function DurakGame(): React.JSX.Element {
                       y={y}
                       width={CARD_W}
                       height={CARD_H}
-                      fill="#ffffff"
+                      fill="#f7f1e1"
                       cornerRadius={8}
-                      stroke={activePair ? "#f59e0b" : "#0f172a"}
+                      stroke={activePair ? "#f2c94c" : "#2b2f33"}
                       strokeWidth={activePair ? 4 : 2}
                     />
                     <Text
@@ -282,9 +298,9 @@ export function DurakGame(): React.JSX.Element {
                           y={y + 22}
                           width={CARD_W}
                           height={CARD_H}
-                          fill="#f8fafc"
+                          fill="#f7f1e1"
                           cornerRadius={8}
-                          stroke="#334155"
+                          stroke="#2b2f33"
                           strokeWidth={2}
                         />
                         <Text
@@ -323,9 +339,9 @@ export function DurakGame(): React.JSX.Element {
                       y={0}
                       width={CARD_W}
                       height={CARD_H}
-                      fill={selected ? "#fef3c7" : "#ffffff"}
+                      fill={selected ? "#f7e5b8" : "#f7f1e1"}
                       cornerRadius={8}
-                      stroke={selected ? "#f59e0b" : "#0f172a"}
+                      stroke={selected ? "#f2c94c" : "#2b2f33"}
                       strokeWidth={selected ? 4 : 2}
                     />
                     <Text
@@ -339,7 +355,8 @@ export function DurakGame(): React.JSX.Element {
                 );
               })}
             </Layer>
-          </Stage>
+            </Stage>
+          </div>
         </CardContent>
       </Card>
 
@@ -347,19 +364,19 @@ export function DurakGame(): React.JSX.Element {
         <CardHeader>
           <CardTitle>Дурак</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm">
+        <CardContent className="space-y-3 text-sm text-muted-foreground">
           <p>Атакующий: {state.attackerId === me ? "вы" : state.attackerId}</p>
           <p>Защищающийся: {state.defenderId === me ? "вы" : state.defenderId}</p>
           <p>Ваших карт: {state.ownHand.length}</p>
 
-          <div className="rounded-md bg-slate-50 p-3">
-            <div className="font-semibold">Доступные действия</div>
-            <ul className="mt-2 space-y-1 text-slate-700">
+          <div className="rounded-md border border-border bg-[#23262a] p-3">
+            <div className="font-semibold text-foreground">Доступные действия</div>
+            <ul className="mt-2 space-y-1 text-muted-foreground">
               {availableActions.map((action) => (
                 <li key={action}>• {action}</li>
               ))}
             </ul>
-            <p className="mt-2 text-xs text-slate-500">Играть можно кнопками и кликами, либо перетягивать карты в игровую зону.</p>
+            <p className="mt-2 text-xs text-muted-foreground">Играть можно кнопками и кликами, либо перетягивать карты в игровую зону.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
@@ -378,23 +395,23 @@ export function DurakGame(): React.JSX.Element {
           </div>
 
           {moveError ? (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900">{moveError}</div>
+            <div className="rounded-md border border-[#d35d5d]/40 bg-[#2c2020] p-3 text-[#d35d5d]">{moveError}</div>
           ) : null}
 
-          <div className="rounded-md bg-slate-50 p-3">
-            <div className="font-semibold">Игроки</div>
+          <div className="rounded-md border border-border bg-[#23262a] p-3">
+            <div className="font-semibold text-foreground">Игроки</div>
             <ul className="mt-2 space-y-1">
               {state.players.map((p) => (
                 <li key={p.userId} className="flex items-center justify-between">
                   <span>{p.isSelf ? `${p.username} (вы)` : p.username}</span>
-                  <span className="text-slate-500">{p.handCount} карт</span>
+                  <span className="text-muted-foreground">{p.handCount} карт</span>
                 </li>
               ))}
             </ul>
           </div>
 
           {state.reason ? (
-            <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-emerald-800">
+            <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-[#f2c94c]">
               Игра завершена: {translateServerMessage(state.reason)}
             </div>
           ) : null}

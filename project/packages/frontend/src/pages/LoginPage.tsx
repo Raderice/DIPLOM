@@ -36,15 +36,19 @@ export default function LoginPage(): React.JSX.Element {
 
   return (
     <main className="mx-auto grid min-h-screen max-w-6xl items-center gap-6 p-4 md:grid-cols-[1.1fr_0.9fr] md:p-8">
-      <section className="animate-fade rounded-3xl border border-white/60 bg-gradient-to-br from-teal-600 via-cyan-600 to-blue-700 p-8 text-white shadow-panel">
-        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-white/80">Сетевая Платформа</p>
-        <h1 className="mt-4 font-display text-3xl font-bold leading-tight md:text-4xl">Настольные игры в реальном времени с комнатами и мгновенным реваншем</h1>
-        <p className="mt-4 max-w-xl text-cyan-100">Играйте в шахматы, русские шашки и дурака онлайн: стабильные комнаты, переподключение и синхронизация состояния матча.</p>
-        <div className="mt-6 grid gap-3 text-sm text-cyan-50 md:grid-cols-2">
-          <div className="rounded-xl border border-white/30 bg-white/10 p-3">Быстрый вход по коду приглашения</div>
-          <div className="rounded-xl border border-white/30 bg-white/10 p-3">Живой чат и статусы игроков</div>
-          <div className="rounded-xl border border-white/30 bg-white/10 p-3">Управление кликом и перетягиванием</div>
-          <div className="rounded-xl border border-white/30 bg-white/10 p-3">Устойчивая игра при переподключении</div>
+      <section className="animate-fade rounded-3xl border border-border bg-gradient-to-br from-[#1f2124] via-[#272a2f] to-[#2b2d30] p-8 shadow-panel">
+        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Сетевая Платформа</p>
+        <h1 className="mt-4 font-display text-3xl font-semibold leading-tight text-foreground md:text-4xl">
+          Настольные игры в реальном времени с комнатами и мгновенным реваншем
+        </h1>
+        <p className="mt-4 max-w-xl text-sm text-muted-foreground">
+          Играйте в шахматы, русские шашки и дурака онлайн: стабильные комнаты, переподключение и синхронизация состояния матча.
+        </p>
+        <div className="mt-6 grid gap-3 text-sm text-foreground md:grid-cols-2">
+          <div className="rounded-xl border border-border bg-[#23262a] p-3">Быстрый вход по коду приглашения</div>
+          <div className="rounded-xl border border-border bg-[#23262a] p-3">Живой чат и статусы игроков</div>
+          <div className="rounded-xl border border-border bg-[#23262a] p-3">Управление кликом и перетягиванием</div>
+          <div className="rounded-xl border border-border bg-[#23262a] p-3">Устойчивая игра при переподключении</div>
         </div>
       </section>
 
@@ -63,9 +67,11 @@ export default function LoginPage(): React.JSX.Element {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
-            {error ? <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</p> : null}
+            {error ? (
+              <p className="rounded-lg border border-[#d35d5d]/40 bg-[#2c2020] p-2 text-sm text-[#d35d5d]">{error}</p>
+            ) : null}
 
-            <div className="rounded-xl border border-cyan-100 bg-cyan-50/70 p-3 text-xs text-slate-700">
+            <div className="rounded-xl border border-border bg-[#23262a] p-3 text-xs text-muted-foreground">
               <p className="mb-2 font-semibold">Тестовые учетные данные</p>
               <p>Пользователь: {demoUser.email} / {demoUser.password}</p>
               <p>Администратор: {demoAdmin.email} / {demoAdmin.password}</p>
@@ -98,8 +104,8 @@ export default function LoginPage(): React.JSX.Element {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Вход..." : "Войти"}
             </Button>
-            <p className="text-sm text-slate-600">
-              Нет аккаунта? <Link to="/register" className="font-semibold text-primary">Регистрация</Link>
+            <p className="text-sm text-muted-foreground">
+              Нет аккаунта? <Link to="/register" className="font-semibold text-[#f2c94c]">Регистрация</Link>
             </p>
           </form>
         </CardContent>

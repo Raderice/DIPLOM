@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Layer, Rect, Stage, Circle, Group } from "react-konva";
 import type { CheckersMovePayload, CheckersState } from "@board-games/shared";
 import { emitGameMove } from "../socket/client";
@@ -6,8 +6,9 @@ import { useGameStore } from "../store/gameStore";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { translateServerMessage } from "../lib/i18n";
 
-const BOARD_PX = 520;
-const CELL = BOARD_PX / 8;
+const BASE_BOARD = 520;
+const LIGHT_SQUARE = "#f0d9b5";
+const DARK_SQUARE = "#b58863";
 
 type Coord = [number, number];
 
@@ -117,11 +118,25 @@ export function CheckersGame(): React.JSX.Element {
   const [selected, setSelected] = useState<Coord | null>(null);
   const [legalTargets, setLegalTargets] = useState<Coord[]>([]);
   const [moveError, setMoveError] = useState<string | null>(null);
+  const boardRef = useRef<HTMLDivElement | null>(null);
+      const [boardSize, setBoardSize] = useState(BASE_BOARD);
 
   const state = useMemo(() => {
     if (!gameState || gameState.gameType !== "checkers") return null;
     return gameState as CheckersState;
   }, [gameState]);
+
+  useEffect(() => {
+    if (!boardRef.current) return;
+    const update = () => {
+      const width = boardRef.current?.clientWidth ?? BASE_BOARD;
+      setBoardSize(Math.max(260, Math.min(BASE_BOARD, width)));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(boardRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   if (!room || !state) {
     return <div className="rounded-lg border p-4">Состояние партии в шашки недоступно.</div>;
@@ -130,6 +145,7 @@ export function CheckersGame(): React.JSX.Element {
   const myUserId = window.localStorage.getItem("user_id") ?? "";
   const myColor = state.colorByPlayerId[myUserId];
   const isFlipped = myColor === "black";
+      const cellSize = boardSize / 8;
 
   const toViewCoord = (row: number, col: number): Coord => {
     if (!isFlipped) return [row, col];
@@ -244,8 +260,9 @@ export function CheckersGame(): React.JSX.Element {
     <section className="grid gap-4 lg:grid-cols-[1fr_280px]">
       <Card>
         <CardContent className="p-3">
-          <Stage width={BOARD_PX} height={BOARD_PX}>
-            <Layer>
+          <div ref={boardRef} className="w-full touch-none">
+            <Stage width={boardSize} height={boardSize}>
+              <Layer>
               {Array.from({ length: 8 }).map((_, vr) =>
                 Array.from({ length: 8 }).map((__, vc) => {
                   const [r, c] = toBoardCoord(vr, vc);
@@ -255,18 +272,18 @@ export function CheckersGame(): React.JSX.Element {
                   return (
                     <Rect
                       key={`sq-${r}-${c}`}
-                      x={vc * CELL}
-                      y={vr * CELL}
-                      width={CELL}
-                      height={CELL}
+                      x={vc * cellSize}
+                      y={vr * cellSize}
+                      width={cellSize}
+                      height={cellSize}
                       fill={
                         isSelected
-                          ? "#f59e0b"
+                          ? "#f2c94c"
                           : isLegal
-                            ? "#22c55e"
+                            ? "#f2c94c"
                             : dark
-                              ? "#334155"
-                              : "#f8fafc"
+                              ? DARK_SQUARE
+                              : LIGHT_SQUARE
                       }
                       opacity={isLegal || isSelected ? 0.88 : 1}
                       onClick={() => void onCellClick(r, c)}
@@ -279,10 +296,10 @@ export function CheckersGame(): React.JSX.Element {
                 row.map((piece, c) => {
                   if (!piece) return null;
                   const [vr, vc] = toViewCoord(r, c);
-                  const cx = vc * CELL + CELL / 2;
-                  const cy = vr * CELL + CELL / 2;
-                  const fill = piece.color === "white" ? "#f8fafc" : "#0f172a";
-                  const stroke = piece.color === "white" ? "#334155" : "#cbd5e1";
+                  const cx = vc * cellSize + cellSize / 2;
+                  const cy = vr * cellSize + cellSize / 2;
+                  const fill = piece.color === "white" ? "#f7f1e1" : "#1e2023";
+                  const stroke = piece.color === "white" ? "#4b4f56" : "#e3d7b8";
                   const canDrag =
                     room.status === "PLAYING" &&
                     !state.reason &&
@@ -290,10 +307,10 @@ export function CheckersGame(): React.JSX.Element {
                     piece.ownerId === myUserId;
 
                   const onDragEnd = (event: { target: { x: () => number; y: () => number } }) => {
-                    const rawX = Math.max(0, Math.min(BOARD_PX - 1, event.target.x()));
-                    const rawY = Math.max(0, Math.min(BOARD_PX - 1, event.target.y()));
-                    const viewCol = Math.max(0, Math.min(7, Math.floor(rawX / CELL)));
-                    const viewRow = Math.max(0, Math.min(7, Math.floor(rawY / CELL)));
+                        const rawX = Math.max(0, Math.min(boardSize - 1, event.target.x()));
+                        const rawY = Math.max(0, Math.min(boardSize - 1, event.target.y()));
+                        const viewCol = Math.max(0, Math.min(7, Math.floor(rawX / cellSize)));
+                        const viewRow = Math.max(0, Math.min(7, Math.floor(rawY / cellSize)));
                     const [toRow, toCol] = toBoardCoord(viewRow, viewCol);
                     void moveFromPiece(r, c, toRow, toCol);
                   };
@@ -308,16 +325,17 @@ export function CheckersGame(): React.JSX.Element {
                       onDragEnd={onDragEnd}
                       onClick={() => void onCellClick(r, c)}
                     >
-                      <Circle x={0} y={0} radius={CELL * 0.36} fill={fill} stroke={stroke} strokeWidth={3} />
+                      <Circle x={0} y={0} radius={cellSize * 0.36} fill={fill} stroke={stroke} strokeWidth={3} />
                       {piece.isKing ? (
-                        <Circle x={0} y={0} radius={CELL * 0.2} fill="#f59e0b" stroke="#78350f" strokeWidth={2} />
+                        <Circle x={0} y={0} radius={cellSize * 0.2} fill="#f2c94c" stroke="#7a5f1b" strokeWidth={2} />
                       ) : null}
                     </Group>
                   );
                 })
               )}
-            </Layer>
-          </Stage>
+              </Layer>
+            </Stage>
+          </div>
         </CardContent>
       </Card>
 
@@ -325,16 +343,16 @@ export function CheckersGame(): React.JSX.Element {
         <CardHeader>
           <CardTitle>Русские шашки</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 text-sm text-slate-700">
+        <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>Вы: {myColor === "white" ? "белые" : myColor === "black" ? "черные" : "наблюдатель"}</p>
           <p>Ход: {state.turnPlayerId === myUserId ? "ваш" : "соперника"}</p>
-          <p className="text-xs text-slate-500">Ходите перетягиванием или кликом: выберите фигуру и затем клетку назначения.</p>
+          <p className="text-xs text-muted-foreground">Ходите перетягиванием или кликом: выберите фигуру и затем клетку назначения.</p>
           <p>Обязательное взятие: {state.mandatoryCapture ? "да" : "нет"}</p>
           {moveError ? (
-            <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900">{moveError}</div>
+            <div className="rounded-md border border-[#d35d5d]/40 bg-[#2c2020] p-3 text-[#d35d5d]">{moveError}</div>
           ) : null}
           {state.reason ? (
-            <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-emerald-800">
+            <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-[#f2c94c]">
               Игра завершена: {translateServerMessage(state.reason)}
             </div>
           ) : null}

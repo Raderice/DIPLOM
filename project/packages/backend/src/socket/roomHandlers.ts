@@ -1,6 +1,8 @@
 import type { GameState, RoomRuntimeState } from "@board-games/shared";
 import type { RuntimeRoom } from "../store/gameStore";
 import { sanitizeDurakStateForPlayer } from "./games/durak";
+import { sanitizeAliasState } from "./games/alias";
+import { sanitizeMafiaState } from "./games/mafia";
 
 export function parseCookie(header: string | undefined): Record<string, string> {
   if (!header) return {};
@@ -15,6 +17,12 @@ export function parseCookie(header: string | undefined): Record<string, string> 
 export function toClientGameState(room: RuntimeRoom, viewerId: string): GameState {
   if (room.state.gameType === "durak") {
     return sanitizeDurakStateForPlayer(room.state, viewerId);
+  }
+  if (room.state.gameType === "alias") {
+    return sanitizeAliasState(room.state);
+  }
+  if (room.state.gameType === "mafia") {
+    return sanitizeMafiaState(room.state, viewerId);
   }
   return room.state;
 }

@@ -16,6 +16,8 @@ enum GameType {
   CHESS
   CHECKERS
   DURAK
+  ALIAS
+  MAFIA
 }
 
 enum RoomStatus {

@@ -5,35 +5,35 @@ export default {
   theme: {
     extend: {
       colors: {
-        border: "hsl(191 28% 78%)",
-        input: "hsl(193 35% 92%)",
-        ring: "hsl(176 93% 32%)",
-        background: "hsl(190 43% 96%)",
-        foreground: "hsl(213 39% 16%)",
+        border: "var(--color-border)",
+        input: "var(--color-input)",
+        ring: "var(--color-ring)",
+        background: "var(--color-bg)",
+        foreground: "var(--color-fg)",
         primary: {
-          DEFAULT: "hsl(176 93% 32%)",
-          foreground: "hsl(210 40% 98%)"
+          DEFAULT: "var(--color-primary)",
+          foreground: "var(--color-on-primary)"
         },
         secondary: {
-          DEFAULT: "hsl(200 94% 40%)",
-          foreground: "hsl(210 40% 98%)"
+          DEFAULT: "var(--color-secondary)",
+          foreground: "var(--color-on-secondary)"
         },
         muted: {
-          DEFAULT: "hsl(188 26% 90%)",
-          foreground: "hsl(204 18% 34%)"
+          DEFAULT: "var(--color-muted)",
+          foreground: "var(--color-muted-fg)"
         },
         card: {
-          DEFAULT: "hsl(0 0% 100% / 0.86)",
-          foreground: "hsl(213 39% 16%)"
+          DEFAULT: "var(--color-card)",
+          foreground: "var(--color-card-fg)"
         }
       },
       fontFamily: {
-        sans: ["'Sora'", "'Segoe UI'", "sans-serif"],
-        display: ["'Unbounded'", "'Sora'", "sans-serif"]
+        sans: ["'Lato'", "'Segoe UI'", "sans-serif"],
+        display: ["'Cinzel'", "'Lato'", "sans-serif"]
       },
       boxShadow: {
-        panel: "0 22px 60px rgba(9, 38, 60, 0.14)",
-        glow: "0 0 0 1px rgba(45, 212, 191, 0.25), 0 20px 50px rgba(6, 95, 70, 0.25)"
+        panel: "0 18px 40px rgba(0, 0, 0, 0.45)",
+        glow: "0 0 0 1px rgba(242, 201, 76, 0.35), 0 10px 30px rgba(0, 0, 0, 0.55)"
       }
     }
   },
