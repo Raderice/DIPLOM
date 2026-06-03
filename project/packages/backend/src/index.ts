@@ -37,7 +37,8 @@ app.use(
   })
 );
 app.use(cookieParser());
-app.use(express.json({ limit: "1mb" }));
+// Allow larger JSON bodies for base64 image uploads (avatars)
+app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan(config.nodeEnv === "development" ? "dev" : "tiny"));
 

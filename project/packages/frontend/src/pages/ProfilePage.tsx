@@ -23,11 +23,12 @@ export default function ProfilePage(): React.JSX.Element {
   const [opponents, setOpponents] = useState<any[]>([]);
 
   useEffect(() => {
-    if (!userId) return;
-    void fetchProfile(userId);
-    void fetchHistory(userId);
-    void fetchOpponents(userId);
-  }, [userId]);
+    const idToFetch = userId ?? me?.id ?? null;
+    if (!idToFetch) return;
+    void fetchProfile(idToFetch);
+    void fetchHistory(idToFetch);
+    void fetchOpponents(idToFetch);
+  }, [userId, me?.id]);
 
   const fetchProfile = async (id: string) => {
     setLoading(true);
@@ -140,17 +141,17 @@ export default function ProfilePage(): React.JSX.Element {
   const isMe = me?.id === profile.id;
 
   return (
-    <main className="mx-auto max-w-4xl p-4">
+    <main className="mx-auto max-w-3xl p-4 sm:p-6">
       <Card>
         <CardHeader>
           <CardTitle>Профиль</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-4">
-              <img src={profile.avatarUrl ?? "/default-avatar.png"} alt="avatar" className="h-20 w-20 rounded-full object-cover" />
-              <div>
-                <div className="text-lg font-semibold">{profile.username}</div>
+            <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+              <img src={profile.avatarUrl ?? "/logo-192.svg"} alt="avatar" className="h-24 w-24 rounded-full object-cover" />
+              <div className="flex-1">
+                <div className="text-xl font-semibold">{profile.username}</div>
                 <div className="text-sm text-muted-foreground">{profile.email}</div>
               </div>
             </div>
@@ -161,7 +162,7 @@ export default function ProfilePage(): React.JSX.Element {
                 <div>
                   <label className="text-sm">Аватар</label>
                   <div className="mt-2 flex items-center gap-3">
-                    <img src={previewUrl ?? form.avatarUrl ?? "/default-avatar.png"} alt="preview" className="h-16 w-16 rounded-full object-cover" />
+                    <img src={previewUrl ?? form.avatarUrl ?? "/logo-192.svg"} alt="preview" className="h-16 w-16 rounded-full object-cover" />
                     <input
                       type="file"
                       accept="image/*"
@@ -193,7 +194,7 @@ export default function ProfilePage(): React.JSX.Element {
               <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-4">
                 {opponents.length === 0 ? <div className="text-sm text-muted-foreground">Нет данных</div> : opponents.map((o) => (
                   <div key={o.id} className="flex items-center gap-2 rounded-xl border p-2">
-                    <img src={o.avatarUrl ?? "/default-avatar.png"} alt="a" className="h-10 w-10 rounded-full object-cover" />
+                    <img src={o.avatarUrl ?? "/logo-192.svg"} alt="a" className="h-10 w-10 rounded-full object-cover" />
                     <div className="flex-1 text-sm">{o.username}</div>
                     {me?.id && me.id === profile.id ? (
                       <Button onClick={() => void createRematch(o.id)}>Реванш</Button>

@@ -146,9 +146,16 @@ export function createUsersRouter(prisma: PrismaClient): Router {
       const filename = `${Date.now()}-${safeName}`;
       const filepath = path.join(uploadsDir, filename);
 
-      fs.writeFileSync(filepath, Buffer.from(base64, "base64"));
+      // Limit file size (after decode) to 5MB
+      const buffer = Buffer.from(base64, "base64");
+      if (buffer.length > 5 * 1024 * 1024) return res.status(400).json({ message: "Image too large" });
+
+      fs.writeFileSync(filepath, buffer);
 
       const relPath = `/uploads/${filename}`;
+
+      // Update user and remove previous avatar file if any
+      const prev = await prisma.user.findUnique({ where: { id }, select: { avatarUrl: true } });
 
       const updated = await prisma.user.update({
         where: { id },
@@ -156,9 +163,19 @@ export function createUsersRouter(prisma: PrismaClient): Router {
         select: { id: true, username: true, email: true, role: true, avatarUrl: true, bio: true, stats: true }
       });
 
+      try {
+        if (prev?.avatarUrl && typeof prev.avatarUrl === "string" && prev.avatarUrl.startsWith("/uploads/")) {
+          const oldPath = path.join(uploadsDir, path.basename(prev.avatarUrl));
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+      } catch (e) {
+        // ignore file delete errors
+      }
+
       res.status(200).json({ user: updated });
     } catch (err) {
-      res.status(401).json({ message: "Unauthorized" });
+      console.error("Avatar upload error:", err);
+      res.status(500).json({ message: "Server error" });
     }
   });
 
