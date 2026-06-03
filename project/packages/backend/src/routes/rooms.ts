@@ -5,6 +5,7 @@ import { z } from "zod";
 import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
 import type { RuntimeRoom } from "../store/gameStore";
 import { requireAuth, type AuthRequest } from "../middleware/auth";
+import { config } from "../config";
 
 const inviteCodeGenerator = customAlphabet("ABCDEFGHJKLMNPQRSTUVWXYZ23456789", 6);
 
@@ -328,6 +329,17 @@ export function createRoomsRouter(
       createdAt: room.createdAt.toISOString(),
       updatedAt: room.updatedAt.toISOString()
     });
+  });
+
+  // Get invite URL / code for the room (safe for public sharing)
+  router.get("/:roomId/invite", async (req, res: Response) => {
+    const roomId = req.params.roomId;
+    const room = await prisma.room.findUnique({ where: { id: roomId } });
+    if (!room) return res.status(404).json({ message: "Room not found" });
+    const inviteCode = room.inviteCode;
+    const client = config.clientOrigin.replace(/\/$/, "");
+    const inviteUrl = `${client}/join/${inviteCode}`;
+    res.status(200).json({ inviteCode, inviteUrl });
   });
 
   return router;

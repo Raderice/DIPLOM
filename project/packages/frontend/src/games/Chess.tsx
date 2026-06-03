@@ -219,10 +219,6 @@ export function ChessGame(): React.JSX.Element {
       setMoveError("Подождите своего хода.");
       return false;
     }
-    if (chess.turn !== myColor) {
-      setMoveError("Подождите своего хода.");
-      return false;
-    }
 
     const from = toSquare(sourceSquare);
     const to = toSquare(targetSquare);
@@ -300,10 +296,10 @@ export function ChessGame(): React.JSX.Element {
   };
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1fr_280px]">
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
       <Card>
         <CardContent className="p-3">
-          <div ref={boardRef} className="w-full">
+          <div ref={boardRef} className="game-canvas">
             <Chessboard
               id={`chess-board-${room.id}`}
               boardOrientation={orientation}

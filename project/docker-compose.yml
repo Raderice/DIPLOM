@@ -44,6 +44,8 @@ services:
         condition: service_healthy
     expose:
       - "4000"
+    volumes:
+      - ./uploads:/repo/uploads
     networks:
       - app_net
 
@@ -69,6 +71,7 @@ services:
       - "80:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./uploads:/repo/uploads:ro
     depends_on:
       - frontend
       - backend

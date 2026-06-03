@@ -22,7 +22,8 @@
     "react-router-dom": "^7.0.2",
     "socket.io-client": "^4.8.0",
     "tailwind-merge": "^2.5.2",
-    "zustand": "^5.0.0"
+    "zustand": "^5.0.0",
+    "qrcode": "^1.5.1"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

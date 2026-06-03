@@ -119,7 +119,7 @@ export function CheckersGame(): React.JSX.Element {
   const [legalTargets, setLegalTargets] = useState<Coord[]>([]);
   const [moveError, setMoveError] = useState<string | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
-      const [boardSize, setBoardSize] = useState(BASE_BOARD);
+  const [boardSize, setBoardSize] = useState(BASE_BOARD);
 
   const state = useMemo(() => {
     if (!gameState || gameState.gameType !== "checkers") return null;
@@ -145,7 +145,7 @@ export function CheckersGame(): React.JSX.Element {
   const myUserId = window.localStorage.getItem("user_id") ?? "";
   const myColor = state.colorByPlayerId[myUserId];
   const isFlipped = myColor === "black";
-      const cellSize = boardSize / 8;
+  const cellSize = boardSize / 8;
 
   const toViewCoord = (row: number, col: number): Coord => {
     if (!isFlipped) return [row, col];
@@ -257,10 +257,10 @@ export function CheckersGame(): React.JSX.Element {
   };
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1fr_280px]">
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
       <Card>
         <CardContent className="p-3">
-          <div ref={boardRef} className="w-full touch-none">
+          <div ref={boardRef} className="game-canvas touch-none">
             <Stage width={boardSize} height={boardSize}>
               <Layer>
               {Array.from({ length: 8 }).map((_, vr) =>
@@ -300,29 +300,13 @@ export function CheckersGame(): React.JSX.Element {
                   const cy = vr * cellSize + cellSize / 2;
                   const fill = piece.color === "white" ? "#f7f1e1" : "#1e2023";
                   const stroke = piece.color === "white" ? "#4b4f56" : "#e3d7b8";
-                  const canDrag =
-                    room.status === "PLAYING" &&
-                    !state.reason &&
-                    state.turnPlayerId === myUserId &&
-                    piece.ownerId === myUserId;
-
-                  const onDragEnd = (event: { target: { x: () => number; y: () => number } }) => {
-                        const rawX = Math.max(0, Math.min(boardSize - 1, event.target.x()));
-                        const rawY = Math.max(0, Math.min(boardSize - 1, event.target.y()));
-                        const viewCol = Math.max(0, Math.min(7, Math.floor(rawX / cellSize)));
-                        const viewRow = Math.max(0, Math.min(7, Math.floor(rawY / cellSize)));
-                    const [toRow, toCol] = toBoardCoord(viewRow, viewCol);
-                    void moveFromPiece(r, c, toRow, toCol);
-                  };
+                  
 
                   return (
                     <Group
                       key={`piece-${piece.id}`}
                       x={cx}
                       y={cy}
-                      draggable={canDrag}
-                      onDragStart={() => selectPiece(r, c)}
-                      onDragEnd={onDragEnd}
                       onClick={() => void onCellClick(r, c)}
                     >
                       <Circle x={0} y={0} radius={cellSize * 0.36} fill={fill} stroke={stroke} strokeWidth={3} />
@@ -346,7 +330,7 @@ export function CheckersGame(): React.JSX.Element {
         <CardContent className="space-y-2 text-sm text-muted-foreground">
           <p>Вы: {myColor === "white" ? "белые" : myColor === "black" ? "черные" : "наблюдатель"}</p>
           <p>Ход: {state.turnPlayerId === myUserId ? "ваш" : "соперника"}</p>
-          <p className="text-xs text-muted-foreground">Ходите перетягиванием или кликом: выберите фигуру и затем клетку назначения.</p>
+          <p className="text-xs text-muted-foreground">Ходите кликом: выберите фигуру и затем клетку назначения.</p>
           <p>Обязательное взятие: {state.mandatoryCapture ? "да" : "нет"}</p>
           {moveError ? (
             <div className="rounded-md border border-[#d35d5d]/40 bg-[#2c2020] p-3 text-[#d35d5d]">{moveError}</div>

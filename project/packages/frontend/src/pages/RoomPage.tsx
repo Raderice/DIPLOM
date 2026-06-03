@@ -14,6 +14,7 @@ import {
 } from "../socket/client";
 import { useGameStore } from "../store/gameStore";
 import { Button } from "../components/ui/button";
+import QRCode from "qrcode";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { gameTypeRu, roomStatusRu, translateServerMessage } from "../lib/i18n";
 import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
@@ -161,6 +162,22 @@ export default function RoomPage(): React.JSX.Element {
     navigate("/lobby");
   };
 
+  const [showQr, setShowQr] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  const generateQr = async () => {
+    if (!room?.inviteCode) return;
+    try {
+      const client = window.location.origin.replace(/\/$/, "");
+      const inviteUrl = `${client}/join/${room.inviteCode}`;
+      const dataUrl = await QRCode.toDataURL(inviteUrl, { margin: 2, width: 300 });
+      setQrDataUrl(dataUrl);
+      setShowQr(true);
+    } catch (err) {
+      console.error("QR generation failed", err);
+    }
+  };
+
   return (
     <main className="mx-auto max-w-4xl space-y-4 p-4 md:p-6">
       <Card>
@@ -198,6 +215,7 @@ export default function RoomPage(): React.JSX.Element {
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={() => void onReady()}>{myReady ? "Не готов" : "Готов"}</Button>
+        <Button variant="outline" onClick={() => void generateQr()}>Показать QR</Button>
         <Button variant="secondary" onClick={() => void onStart()} disabled={!canStart || room?.status !== "WAITING"}>
           Начать игру
         </Button>
@@ -207,6 +225,18 @@ export default function RoomPage(): React.JSX.Element {
       {connectionNotice ? (
         <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-sm text-[#f2c94c]">
           {connectionNotice}
+        </div>
+      ) : null}
+
+      {showQr && qrDataUrl ? (
+        <div className="fixed left-0 top-0 z-50 flex h-screen w-screen items-center justify-center bg-black/60" onClick={() => setShowQr(false)}>
+          <div className="rounded-xl bg-[#0b0b0c] p-6" onClick={(e) => e.stopPropagation()}>
+            <img src={qrDataUrl} alt="Invite QR" className="h-72 w-72" />
+            <div className="mt-4 text-center">
+              <div className="text-sm text-muted-foreground">Отсканируйте QR чтобы присоединиться</div>
+              <div className="text-xs text-muted-foreground">Код: {room?.inviteCode}</div>
+            </div>
+          </div>
         </div>
       ) : null}
     </main>

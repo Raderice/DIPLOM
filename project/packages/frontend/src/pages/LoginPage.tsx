@@ -71,35 +71,7 @@ export default function LoginPage(): React.JSX.Element {
               <p className="rounded-lg border border-[#d35d5d]/40 bg-[#2c2020] p-2 text-sm text-[#d35d5d]">{error}</p>
             ) : null}
 
-            <div className="rounded-xl border border-border bg-[#23262a] p-3 text-xs text-muted-foreground">
-              <p className="mb-2 font-semibold">Тестовые учетные данные</p>
-              <p>Пользователь: {demoUser.email} / {demoUser.password}</p>
-              <p>Администратор: {demoAdmin.email} / {demoAdmin.password}</p>
-              <div className="mt-2 flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-8 px-2 text-xs"
-                  onClick={() => {
-                    setEmail(demoUser.email);
-                    setPassword(demoUser.password);
-                  }}
-                >
-                  Вставить пользователя
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-8 px-2 text-xs"
-                  onClick={() => {
-                    setEmail(demoAdmin.email);
-                    setPassword(demoAdmin.password);
-                  }}
-                >
-                  Вставить администратора
-                </Button>
-              </div>
-            </div>
+            {/* Test credentials removed for security. Use registration to create an account. */}
 
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Вход..." : "Войти"}

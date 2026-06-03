@@ -1,6 +1,7 @@
 import http from "node:http";
 import express, { type Request, type Response } from "express";
 import cors from "cors";
+import path from "path";
 import cookieParser from "cookie-parser";
 import helmet from "helmet";
 import morgan from "morgan";
@@ -10,6 +11,7 @@ import { errorHandler } from "./middleware/errorHandler";
 import { createAuthRouter } from "./routes/auth";
 import { createRoomsRouter } from "./routes/rooms";
 import { createAdminRouter } from "./routes/admin";
+import { createUsersRouter } from "./routes/users";
 import { createSocketServer } from "./socket";
 import { roomCount, roomStore } from "./store/gameStore";
 
@@ -52,6 +54,11 @@ app.get("/health", (_req: Request, res: Response) => {
 app.use("/api/auth", createAuthRouter(prisma));
 app.use("/api/rooms", createRoomsRouter(prisma, roomStore(), closeRoom));
 app.use("/api/admin", createAdminRouter(roomStore(), closeRoom));
+app.use("/api/users", createUsersRouter(prisma));
+
+// Serve uploaded avatars
+const uploadsPath = path.resolve(process.cwd(), "uploads");
+app.use("/uploads", express.static(uploadsPath));
 
 app.use(errorHandler);
 

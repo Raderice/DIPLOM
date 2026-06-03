@@ -42,7 +42,7 @@ export function MafiaGame(): React.JSX.Element {
   };
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <Card>
         <CardHeader>
           <CardTitle>Мафия</CardTitle>

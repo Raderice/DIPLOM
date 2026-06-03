@@ -37,6 +37,12 @@ export interface PublicUser {
   role: Role;
 }
 
+export interface UserProfile extends PublicUser {
+  avatarUrl?: string | null;
+  bio?: string | null;
+  stats?: Record<string, unknown> | null;
+}
+
 export interface PlayerInRoom {
   userId: string;
   username: string;

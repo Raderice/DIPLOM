@@ -56,7 +56,7 @@ export function AliasGame(): React.JSX.Element {
   const canStartRound = state.status !== "ROUND" && room.status === "PLAYING";
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1fr_300px]">
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
       <Card>
         <CardHeader>
           <CardTitle>Alias</CardTitle>

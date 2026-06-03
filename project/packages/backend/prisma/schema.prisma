@@ -32,6 +32,9 @@ model User {
   username      String         @unique
   email         String         @unique
   passwordHash  String
+  avatarUrl     String?
+  bio           String?
+  stats         Json?
   role          Role           @default(USER)
   tokenVersion  Int            @default(0)
   createdAt     DateTime       @default(now())

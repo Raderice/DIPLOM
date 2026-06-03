@@ -11,6 +11,9 @@
     "typecheck": "npm run typecheck -w @board-games/shared && npm run typecheck -w @board-games/backend && npm run typecheck -w @board-games/frontend",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down -v"
+    ,"prod:build": "npm run build",
+    "prod:up": "docker compose -f docker-compose.yml up --build -d",
+    "prod:down": "docker compose -f docker-compose.yml down -v"
   },
   "devDependencies": {
     "concurrently": "^9.0.1",

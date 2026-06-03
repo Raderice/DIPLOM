@@ -53,7 +53,7 @@ export function DurakGame(): React.JSX.Element {
     if (!boardRef.current) return;
     const update = () => {
       const width = boardRef.current?.clientWidth ?? TABLE_W;
-      setTableScale(Math.max(0.3, Math.min(1, width / TABLE_W)));
+      setTableScale(Math.max(0.35, Math.min(1, width / TABLE_W)));
     };
     update();
     const observer = new ResizeObserver(update);
@@ -71,12 +71,22 @@ export function DurakGame(): React.JSX.Element {
   const canAttackByDrag = isAttacker && state.phase === "attack" && !state.reason;
   const canDefendByDrag = isDefender && state.phase === "defend" && !state.reason;
 
+  const tableCount = state.table.length;
+  const tableSpacing = tableCount > 1 ? Math.min(130, Math.floor((TABLE_ZONE.width - CARD_W) / (tableCount - 1))) : 0;
+  const tableSpan = CARD_W + tableSpacing * Math.max(0, tableCount - 1);
+  const tableStartX = TABLE_ZONE.x + Math.max(0, (TABLE_ZONE.width - tableSpan) / 2);
+
+  const handCount = state.ownHand.length;
+  const handSpacing = handCount > 1 ? Math.min(80, Math.floor((TABLE_W - 80 - CARD_W) / (handCount - 1))) : 0;
+  const handSpan = CARD_W + handSpacing * Math.max(0, handCount - 1);
+  const handStartX = Math.max(20, (TABLE_W - handSpan) / 2);
+
   const findNearestUndefendedPair = (dropX: number): string | null => {
     const undefended = state.table
       .map((pair, idx) => ({
         id: pair.id,
         defended: Boolean(pair.defense),
-        centerX: 80 + idx * 130 + CARD_W / 2
+        centerX: tableStartX + idx * tableSpacing + CARD_W / 2
       }))
       .filter((pair) => !pair.defended);
 
@@ -225,10 +235,10 @@ export function DurakGame(): React.JSX.Element {
   })();
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
+    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
       <Card>
         <CardContent className="p-3">
-          <div ref={boardRef} className="w-full touch-none">
+          <div ref={boardRef} className="game-canvas touch-none">
             <Stage width={TABLE_W * tableScale} height={TABLE_H * tableScale} scaleX={tableScale} scaleY={tableScale}>
             <Layer>
               <Rect x={0} y={0} width={TABLE_W} height={TABLE_H} fill="#1f3a2c" cornerRadius={18} />
@@ -269,7 +279,7 @@ export function DurakGame(): React.JSX.Element {
               />
 
               {state.table.map((pair, idx) => {
-                const x = 80 + idx * 130;
+                const x = tableStartX + idx * tableSpacing;
                 const y = 150;
                 const activePair = selectedPairId === pair.id;
                 return (
@@ -321,7 +331,7 @@ export function DurakGame(): React.JSX.Element {
               })}
 
               {state.ownHand.map((card, idx) => {
-                const x = 40 + idx * 80;
+                const x = handStartX + idx * handSpacing;
                 const y = TABLE_H - 130;
                 const selected = selectedCardId === card.id;
                 return (

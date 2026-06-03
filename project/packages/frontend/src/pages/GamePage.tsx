@@ -34,6 +34,8 @@ export default function GamePage(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
 
+  const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams("");
+
   const room = useGameStore((s) => s.room);
   const gameState = useGameStore((s) => s.gameState);
   const chat = useGameStore((s) => s.chat);
@@ -57,7 +59,6 @@ export default function GamePage(): React.JSX.Element {
       navigate("/lobby");
       return;
     }
-
     setLoading(true);
     const socket = connectSocket();
 
@@ -235,6 +236,8 @@ export default function GamePage(): React.JSX.Element {
   };
 
   const renderGame = (): React.JSX.Element => {
+    // render actual game when room/gameState loaded
+
     if (!room || !gameState) {
       return <div className="rounded-lg border p-4">Загрузка игры...</div>;
     }
@@ -250,8 +253,8 @@ export default function GamePage(): React.JSX.Element {
   const canStart = Boolean(room && room.hostId === me && room.players.filter((p) => p.connected).every((p) => p.ready));
 
   return (
-    <main className="mx-auto grid max-w-7xl gap-4 p-4 md:p-6 lg:grid-cols-[1fr_320px]">
-      <section className="space-y-4">
+    <main className="mx-auto grid max-w-7xl gap-4 p-4 md:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <section className="min-w-0 space-y-4">
         <Card className="overflow-hidden">
           <div className="border-b border-border bg-[#23262a] px-6 py-4">
             <h2 className="font-display text-lg font-semibold tracking-wide text-foreground">
@@ -294,10 +297,12 @@ export default function GamePage(): React.JSX.Element {
           </CardContent>
         </Card>
 
-        <section>{loading ? <div className="rounded-lg border p-4">Подключение к комнате...</div> : renderGame()}</section>
+        <section className="min-w-0">
+          {loading ? <div className="rounded-lg border p-4">Подключение к комнате...</div> : renderGame()}
+        </section>
       </section>
 
-      <aside className="space-y-4">
+      <aside className="min-w-0 space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Игроки</CardTitle>
@@ -324,7 +329,7 @@ export default function GamePage(): React.JSX.Element {
             <CardTitle>Чат</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="h-64 space-y-2 overflow-y-auto rounded-xl border border-border bg-[#1f2124] p-2">
+            <div className="h-56 space-y-2 overflow-y-auto rounded-xl border border-border bg-[#1f2124] p-2 sm:h-64">
               {chat.map((m) => (
                 <div key={m.id} className="text-sm">
                   <span className="font-semibold">{m.username}: </span>
