@@ -1,0 +1,64 @@
+erDiagram
+  USER {
+    string id
+    string username
+    string email
+    string passwordHash
+    string avatarUrl
+    string bio
+    json stats
+    string role
+    int tokenVersion
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  ROOM {
+    string id
+    string name
+    string gameType
+    string status
+    int maxPlayers
+    boolean isPublic
+    string inviteCode
+    string hostId
+    datetime createdAt
+    datetime updatedAt
+  }
+
+  ROOMMEMBER {
+    string id
+    string roomId
+    string userId
+    boolean ready
+    datetime joinedAt
+    datetime disconnectedAt
+  }
+
+  GAMESESSION {
+    string id
+    string roomId
+    datetime startedAt
+    datetime endedAt
+    string winnerId
+    json log
+  }
+
+  REFRESHTOKEN {
+    string id
+    string userId
+    string tokenHash
+    datetime expiresAt
+    datetime revokedAt
+    string userAgent
+    string ipAddress
+    datetime createdAt
+  }
+
+  %% Relations
+  USER ||--o{ ROOM : "hosts"
+  ROOM ||--o{ ROOMMEMBER : "has_members"
+  USER ||--o{ ROOMMEMBER : "member_of"
+  ROOM ||--o{ GAMESESSION : "has_sessions"
+  USER ||--o{ GAMESESSION : "winner_of"
+  USER ||--o{ REFRESHTOKEN : "has_tokens"
