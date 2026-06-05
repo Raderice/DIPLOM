@@ -9,7 +9,7 @@ function NavItem({ to, children, onClick }: { to: string; children: React.ReactN
     <NavLink
       to={to}
       onClick={onClick}
-      className={({ isActive }) =>
+      className={({ isActive }: { isActive: boolean }) =>
         [
           "relative px-1 py-0.5 text-sm font-medium transition-colors duration-150",
           "after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-full after:rounded-full after:transition-all after:duration-200",
@@ -163,7 +163,7 @@ function MobileNavItem({
     <NavLink
       to={to}
       onClick={onClick}
-      className={({ isActive }) =>
+      className={({ isActive }: { isActive: boolean }) =>
         [
           "flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
           isActive
