@@ -6,7 +6,7 @@
     "moduleResolution": "Bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client", "react", "react-dom"],
+    "types": ["vite/client"],
     "noEmit": true,
     "paths": {
       "@/*": ["./src/*"]
