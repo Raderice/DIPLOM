@@ -10,6 +10,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="crash-fallback" style="display:none;padding:40px;font-family:sans-serif;text-align:center">
+      <h2>Произошла ошибка загрузки</h2>
+      <p>Попробуйте отключить расширения браузера (AdBlock, VPN) или откройте сайт в режиме инкогнито.</p>
+      <button onclick="window.location.reload()" style="margin-top:16px;padding:8px 24px;cursor:pointer;font-size:16px">
+        Обновить страницу
+      </button>
+    </div>
+    <script>
+      window.addEventListener('error', function(e) {
+        if (e.message && e.message.includes('call stack')) {
+          document.getElementById('root').style.display = 'none';
+          document.getElementById('crash-fallback').style.display = 'block';
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
