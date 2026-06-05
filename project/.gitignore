@@ -9,3 +9,4 @@ packages/backend/dev.db-journal
 
 .DS_Store
 .vscode
+.claude
