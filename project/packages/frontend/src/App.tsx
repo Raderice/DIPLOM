@@ -1,5 +1,23 @@
-import { Navigate, createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Navigate, createBrowserRouter, RouterProvider, useRouteError } from "react-router-dom";
 import { useEffect } from "react";
+
+function RouteErrorPage() {
+  const error = useRouteError();
+  const isStackOverflow = error instanceof RangeError && String(error.message).includes("call stack");
+  return (
+    <div style={{ padding: 40, fontFamily: "sans-serif", textAlign: "center" }}>
+      <h2>{isStackOverflow ? "Ошибка загрузки" : "Что-то пошло не так"}</h2>
+      <p>
+        {isStackOverflow
+          ? "Расширение браузера мешает работе сайта. Отключите AdBlock / VPN расширение или откройте сайт в режиме инкогнито."
+          : "Попробуйте обновить страницу."}
+      </p>
+      <button onClick={() => window.location.reload()} style={{ marginTop: 16, padding: "8px 24px", cursor: "pointer", fontSize: 16 }}>
+        Обновить страницу
+      </button>
+    </div>
+  );
+}
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import LobbyPage from "./pages/LobbyPage";
@@ -48,6 +66,7 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { path: "/", element: <Navigate to="/lobby" replace /> },
       { path: "/login", element: <GuestOnly><LoginPage /></GuestOnly> },
