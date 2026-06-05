@@ -2,86 +2,109 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 
-const demoUser = {
-  email: import.meta.env.VITE_TEST_USER_EMAIL ?? "demo@example.com",
-  password: import.meta.env.VITE_TEST_USER_PASSWORD ?? "DemoUser123!"
-};
-
-const demoAdmin = {
-  email: import.meta.env.VITE_TEST_ADMIN_EMAIL ?? "admin@example.com",
-  password: import.meta.env.VITE_TEST_ADMIN_PASSWORD ?? "AdminUser123!"
-};
-
 export default function LoginPage(): React.JSX.Element {
-  const navigate = useNavigate();
-  const login = useAuthStore((s) => s.login);
-  const loading = useAuthStore((s) => s.loading);
-  const error = useAuthStore((s) => s.error);
+  const navigate   = useNavigate();
+  const login      = useAuthStore((s) => s.login);
+  const loading    = useAuthStore((s) => s.loading);
+  const error      = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
 
-  const [email, setEmail] = useState("");
+  const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
 
-  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     clearError();
     const ok = await login(email, password);
-    if (ok) {
-      navigate("/lobby");
-    }
+    if (ok) navigate("/lobby");
   };
 
   return (
-    <main className="mx-auto grid min-h-screen max-w-6xl items-center gap-6 p-4 md:grid-cols-[1.1fr_0.9fr] md:p-8">
-      <section className="animate-fade rounded-3xl border border-border bg-gradient-to-br from-[#1f2124] via-[#272a2f] to-[#2b2d30] p-8 shadow-panel">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted-foreground">Сетевая Платформа</p>
-        <h1 className="mt-4 font-display text-3xl font-semibold leading-tight text-foreground md:text-4xl">
-          Настольные игры в реальном времени с комнатами и мгновенным реваншем
-        </h1>
-        <p className="mt-4 max-w-xl text-sm text-muted-foreground">
-          Играйте в шахматы, русские шашки и дурака онлайн: стабильные комнаты, переподключение и синхронизация состояния матча.
-        </p>
-        <div className="mt-6 grid gap-3 text-sm text-foreground md:grid-cols-2">
-          <div className="rounded-xl border border-border bg-[#23262a] p-3">Быстрый вход по коду приглашения</div>
-          <div className="rounded-xl border border-border bg-[#23262a] p-3">Живой чат и статусы игроков</div>
-          <div className="rounded-xl border border-border bg-[#23262a] p-3">Управление кликом и перетягиванием</div>
-          <div className="rounded-xl border border-border bg-[#23262a] p-3">Устойчивая игра при переподключении</div>
-        </div>
-      </section>
+    <div className="flex min-h-[calc(100dvh-64px)] items-center justify-center px-4 py-12">
+      <div className="w-full max-w-5xl">
+        <div className="grid gap-8 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
 
-      <Card className="w-full animate-rise">
-        <CardHeader>
-          <CardTitle>С возвращением</CardTitle>
-          <CardDescription>Войдите в аккаунт, чтобы продолжить игру.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-3">
-            <Input type="email" placeholder="Почта" value={email} onChange={(e) => setEmail(e.target.value)} required />
-            <Input
-              type="password"
-              placeholder="Пароль"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            {error ? (
-              <p className="rounded-lg border border-[#d35d5d]/40 bg-[#2c2020] p-2 text-sm text-[#d35d5d]">{error}</p>
-            ) : null}
+          {/* Hero */}
+          <div className="animate-fade space-y-6 text-center lg:text-left">
+            <div>
+              <p className="mb-3 inline-block rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                Сетевая платформа
+              </p>
+              <h1 className="font-display text-3xl font-semibold leading-snug text-foreground sm:text-4xl">
+                Настольные игры<br className="hidden sm:block" /> в реальном времени
+              </h1>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground max-w-md mx-auto lg:mx-0">
+                Шахматы, шашки, дурак, Alias и Мафия — всё в одном месте. Создавайте комнаты, приглашайте друзей и играйте мгновенно.
+              </p>
+            </div>
 
-            {/* Test credentials removed for security. Use registration to create an account. */}
+            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-2 max-w-md mx-auto lg:mx-0">
+              {[
+                { icon: "♟", label: "Шахматы с часами" },
+                { icon: "⬤", label: "Русские шашки" },
+                { icon: "♠", label: "Карточный дурак" },
+                { icon: "💬", label: "Alias и Мафия" }
+              ].map(({ icon, label }) => (
+                <div key={label} className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
+                  <span className="text-base">{icon}</span>
+                  <span className="text-muted-foreground">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
 
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Вход..." : "Войти"}
-            </Button>
-            <p className="text-sm text-muted-foreground">
-              Нет аккаунта? <Link to="/register" className="font-semibold text-[#f2c94c]">Регистрация</Link>
+          {/* Form */}
+          <div className="animate-rise rounded-2xl border border-border bg-card p-6 shadow-panel sm:p-8">
+            <div className="mb-6">
+              <h2 className="font-display text-2xl font-semibold text-foreground">С возвращением</h2>
+              <p className="mt-1 text-sm text-muted-foreground">Войдите, чтобы продолжить игру</p>
+            </div>
+
+            <form onSubmit={onSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Почта</label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Пароль</label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+              </div>
+
+              {error ? (
+                <div className="notice-error">{error}</div>
+              ) : null}
+
+              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                {loading ? "Вход..." : "Войти"}
+              </Button>
+            </form>
+
+            <p className="mt-5 text-center text-sm text-muted-foreground">
+              Нет аккаунта?{" "}
+              <Link to="/register" className="font-semibold text-primary hover:underline">
+                Зарегистрироваться
+              </Link>
             </p>
-          </form>
-        </CardContent>
-      </Card>
-    </main>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

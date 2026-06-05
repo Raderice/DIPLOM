@@ -4,9 +4,9 @@ import Footer from "./ui/Footer";
 
 export default function Layout(): React.JSX.Element {
   return (
-    <div className="min-h-screen bg-[#0b0b0c] text-white">
+    <div className="flex min-h-dvh flex-col bg-background text-foreground">
       <Header />
-      <main className="mx-auto max-w-4xl px-4 py-6 md:px-6 md:py-8">
+      <main className="flex-1 w-full">
         <Outlet />
       </main>
       <Footer />

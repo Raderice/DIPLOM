@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;600;700;900&family=Cinzel:wght@500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cinzel:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,38 +6,38 @@
 
 :root {
   color-scheme: dark;
-  --color-bg: #2b2d30;
-  --color-fg: #f2f2f2;
-  --color-card: #1f2124;
-  --color-card-fg: #f2f2f2;
-  --color-border: #3a3d42;
-  --color-input: #24262a;
-  --color-ring: #f2c94c;
-  --color-primary: #f2c94c;
-  --color-on-primary: #1a1a1a;
-  --color-secondary: #3b7a57;
-  --color-on-secondary: #f2f2f2;
-  --color-muted: #2f3236;
-  --color-muted-fg: #a7abb2;
-  --color-danger: #d35d5d;
-  --board-light: #f0d9b5;
-  --board-dark: #b58863;
+  --color-bg:         #0d0f12;
+  --color-fg:         #e8eaf0;
+  --color-card:       #161920;
+  --color-card-fg:    #e8eaf0;
+  --color-border:     #252830;
+  --color-input:      #1e2229;
+  --color-ring:       #f2c94c;
+  --color-primary:    #f2c94c;
+  --color-on-primary: #111318;
+  --color-secondary:  #2ea664;
+  --color-on-secondary: #ffffff;
+  --color-muted:      #1e2229;
+  --color-muted-fg:   #7b8394;
+  --color-danger:     #e05555;
+  --board-light:      #f0d9b5;
+  --board-dark:       #b58863;
 }
+
+/* ─── Base ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
 
 body {
   @apply bg-background text-foreground antialiased;
   margin: 0;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+  background-color: var(--color-bg);
   background-image:
-    radial-gradient(circle at 8% 12%, rgba(242, 201, 76, 0.12), transparent 40%),
-    radial-gradient(circle at 90% 18%, rgba(90, 135, 100, 0.18), transparent 45%),
-    linear-gradient(180deg, #2b2d30 0%, #24262a 60%, #1e2023 100%);
+    radial-gradient(ellipse 80% 50% at 20% 0%,   rgba(242,201,76,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%,  rgba(46,166,100,0.06) 0%, transparent 50%);
   background-attachment: fixed;
-}
-
-#root {
-  min-height: 100vh;
 }
 
 body::before {
@@ -45,59 +45,84 @@ body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(45deg, rgba(245, 215, 161, 0.05) 25%, transparent 25%, transparent 50%, rgba(245, 215, 161, 0.05) 50%, rgba(245, 215, 161, 0.05) 75%, transparent 75%, transparent);
-  background-size: 120px 120px, 120px 120px, 140px 140px;
-  opacity: 0.22;
   z-index: -1;
+  background-image:
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(0deg,  rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 80px 80px;
 }
 
-button,
-input,
-select,
-textarea {
-  touch-action: manipulation;
-}
+#root { min-height: 100dvh; display: flex; flex-direction: column; }
 
+/* ─── Interactive elements touch-friendly ────────────────── */
+button, input, select, textarea { touch-action: manipulation; }
+
+/* ─── Scrollbar ──────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-bg); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-muted-fg); }
+
+/* ─── Game canvas wrapper ────────────────────────────────── */
 .game-canvas {
   width: 100%;
   max-width: 100%;
   overflow: hidden;
   display: flex;
   justify-content: center;
-  align-items: center;
+  align-items: flex-start;
 }
+.game-canvas > * { max-width: 100%; }
 
-.game-canvas > * {
-  max-width: 100%;
-}
-
+/* ─── Animations ─────────────────────────────────────────── */
 .animate-rise {
-  animation: rise-in 360ms ease-out both;
+  animation: rise-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-
 .animate-fade {
-  animation: fade-in 320ms ease-out both;
+  animation: fade-in 340ms ease-out both;
+}
+.animate-slide-up {
+  animation: slide-up 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 @keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0)   scale(1); }
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+/* ─── Game-type badge colors ─────────────────────────────── */
+.badge-chess    { background: rgba(74,144,217,0.15); color: #6aadff; border-color: rgba(74,144,217,0.3); }
+.badge-checkers { background: rgba(217,119,6,0.15);  color: #f59e0b; border-color: rgba(217,119,6,0.3); }
+.badge-durak    { background: rgba(22,163,74,0.15);  color: #4ade80; border-color: rgba(22,163,74,0.3); }
+.badge-alias    { background: rgba(124,58,237,0.15); color: #a78bfa; border-color: rgba(124,58,237,0.3); }
+.badge-mafia    { background: rgba(220,38,38,0.15);  color: #f87171; border-color: rgba(220,38,38,0.3); }
+
+/* ─── Notice / alert ─────────────────────────────────────── */
+.notice-warn  { @apply rounded-xl border border-[#f2c94c]/40 bg-[#2a2310] px-4 py-3 text-sm text-[#f2c94c]; }
+.notice-error { @apply rounded-xl border border-[#e05555]/40 bg-[#2a1414] px-4 py-3 text-sm text-[#e05555]; }
+.notice-info  { @apply rounded-xl border border-[#6aadff]/30 bg-[#0e1a2a] px-4 py-3 text-sm text-[#6aadff]; }
+
+/* ─── Glass card ─────────────────────────────────────────── */
+.card-glass {
+  background: rgba(22, 25, 32, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ─── Hover glow on cards ────────────────────────────────── */
+.card-hover {
+  transition: border-color 200ms, box-shadow 200ms, transform 200ms;
+}
+.card-hover:hover {
+  border-color: rgba(242,201,76,0.3);
+  box-shadow: 0 0 0 1px rgba(242,201,76,0.12), 0 8px 24px rgba(0,0,0,0.4);
+  transform: translateY(-1px);
 }

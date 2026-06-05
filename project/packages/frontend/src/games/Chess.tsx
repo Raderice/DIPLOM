@@ -10,34 +10,23 @@ import { translateServerMessage } from "../lib/i18n";
 
 function formatClock(ms: number): string {
   const totalSec = Math.max(0, Math.floor(ms / 1000));
-  const min = Math.floor(totalSec / 60)
-    .toString()
-    .padStart(2, "0");
+  const min = Math.floor(totalSec / 60).toString().padStart(2, "0");
   const sec = (totalSec % 60).toString().padStart(2, "0");
   return `${min}:${sec}`;
 }
 
 function getEffectiveClocks(chess: ChessState, status: string, nowMs: number): Record<string, number> {
   const clocks: Record<string, number> = { ...chess.clocksMs };
-  if (status !== "PLAYING" || chess.reason) {
-    return clocks;
-  }
-
+  if (status !== "PLAYING" || chess.reason) return clocks;
   const activePlayerId = Object.entries(chess.colorByPlayerId).find(([, color]) => color === chess.turn)?.[0];
-  if (!activePlayerId) {
-    return clocks;
-  }
-
+  if (!activePlayerId) return clocks;
   const elapsedMs = Math.max(0, nowMs - chess.lastMoveAtMs);
-  const currentValue = clocks[activePlayerId] ?? 0;
-  clocks[activePlayerId] = Math.max(0, currentValue - elapsedMs);
+  clocks[activePlayerId] = Math.max(0, (clocks[activePlayerId] ?? 0) - elapsedMs);
   return clocks;
 }
 
 function toFriendlyMoveError(message: string): string {
-  if (/invalid move|illegal chess move/i.test(message)) {
-    return "Недопустимый ход. Выберите одну из подсвеченных клеток.";
-  }
+  if (/invalid move|illegal chess move/i.test(message)) return "Недопустимый ход.";
   return translateServerMessage(message);
 }
 
@@ -46,13 +35,13 @@ function toSquare(value: string): Square | null {
 }
 
 export function ChessGame(): React.JSX.Element {
-  const room = useGameStore((s) => s.room);
+  const room      = useGameStore((s) => s.room);
   const gameState = useGameStore((s) => s.gameState);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
-  const [legalTargets, setLegalTargets] = useState<Square[]>([]);
-  const [legalCaptures, setLegalCaptures] = useState<Square[]>([]);
-  const [moveError, setMoveError] = useState<string | null>(null);
+  const [legalTargets,   setLegalTargets]   = useState<Square[]>([]);
+  const [legalCaptures,  setLegalCaptures]  = useState<Square[]>([]);
+  const [moveError,      setMoveError]      = useState<string | null>(null);
   const [promotionTarget, setPromotionTarget] = useState<{ from: Square; to: Square } | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const [boardSize, setBoardSize] = useState(520);
@@ -62,18 +51,15 @@ export function ChessGame(): React.JSX.Element {
     return gameState as ChessState;
   }, [gameState]);
 
+  const chessEngine = useMemo(
+    () => (chess ? new Chess(chess.fen) : null),
+    [chess?.fen]
+  );
+
   useEffect(() => {
-    if (!room || !chess || room.status !== "PLAYING" || chess.reason) {
-      return;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setNowMs(Date.now());
-    }, 250);
-
-    return () => {
-      window.clearInterval(intervalId);
-    };
+    if (!room || !chess || room.status !== "PLAYING" || chess.reason) return;
+    const id = window.setInterval(() => setNowMs(Date.now()), 250);
+    return () => window.clearInterval(id);
   }, [room, chess]);
 
   useEffect(() => {
@@ -86,235 +72,188 @@ export function ChessGame(): React.JSX.Element {
 
   useEffect(() => {
     if (!boardRef.current) return;
-
     const update = () => {
-      const width = boardRef.current?.clientWidth ?? 520;
-      setBoardSize(Math.max(280, Math.min(560, width)));
+      const w = boardRef.current?.clientWidth ?? 520;
+      setBoardSize(Math.max(280, Math.min(600, w)));
     };
-
     update();
-    const observer = new ResizeObserver(update);
-    observer.observe(boardRef.current);
-
-    return () => observer.disconnect();
+    const obs = new ResizeObserver(update);
+    obs.observe(boardRef.current);
+    return () => obs.disconnect();
   }, []);
 
-  if (!room || !chess) {
-    return <div className="rounded-lg border p-4">Состояние шахматной партии недоступно.</div>;
+  if (!room || !chess || !chessEngine) {
+    return <div className="rounded-lg border p-4">Состояние партии недоступно.</div>;
   }
 
-  const me = window.localStorage.getItem("user_id") ?? "";
+  const me      = window.localStorage.getItem("user_id") ?? "";
   const myColor = chess.colorByPlayerId[me];
-  const orientation = myColor === "b" ? "black" : "white";
-  const chessEngine = useMemo(() => new Chess(chess.fen), [chess.fen]);
+  const orientation: "white" | "black" = myColor === "b" ? "black" : "white";
+  const isMyTurn = chess.turn === myColor;
+  const gameOver = !!chess.reason || room.status !== "PLAYING";
 
-  const getTargetsForSquare = (square: Square): { targets: Square[]; captures: Square[] } => {
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+  const getLegalTargets = (sq: Square): { targets: Square[]; captures: Square[] } => {
     try {
-      const moves = chessEngine.moves({ square, verbose: true }) as Array<{ to: Square; captured?: string }>;
-      const targets: Square[] = [];
+      const moves = chessEngine.moves({ square: sq, verbose: true }) as Array<{ to: Square; captured?: string }>;
+      const targets: Square[]  = [];
       const captures: Square[] = [];
-
-      for (const move of moves) {
-        targets.push(move.to);
-        if (move.captured) {
-          captures.push(move.to);
-        }
+      for (const m of moves) {
+        targets.push(m.to);
+        if (m.captured) captures.push(m.to);
       }
-
       return { targets, captures };
-    } catch {
-      return { targets: [], captures: [] };
-    }
+    } catch { return { targets: [], captures: [] }; }
   };
 
-  const isPromotionMove = (from: Square, to: Square): boolean => {
+  const isPromotion = (from: Square, to: Square): boolean => {
     const piece = chessEngine.get(from);
-    if (!piece || piece.type !== "p") {
-      return false;
-    }
-
-    const toRank = Number(to[1]);
-    return (piece.color === "w" && toRank === 8) || (piece.color === "b" && toRank === 1);
+    if (!piece || piece.type !== "p") return false;
+    const rank = Number(to[1]);
+    return (piece.color === "w" && rank === 8) || (piece.color === "b" && rank === 1);
   };
 
-  const sendMove = async (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n"): Promise<boolean> => {
-    const payload: ChessMovePayload = {
-      gameType: "chess",
-      roomId: room.id,
-      from,
-      to,
-      ...(promotion ? { promotion } : {})
-    };
-
+  const sendMove = async (from: Square, to: Square, promotion?: "q" | "r" | "b" | "n"): Promise<void> => {
+    const payload: ChessMovePayload = { gameType: "chess", roomId: room.id, from, to, ...(promotion ? { promotion } : {}) };
     const response = await emitGameMove(payload);
     if (!response.ok) {
       setMoveError(toFriendlyMoveError(response.error));
-      return false;
+    } else {
+      setMoveError(null);
     }
-
-    setMoveError(null);
-    return true;
   };
 
+  // ── click handler ───────────────────────────────────────────────────────────
+
   const onSquareClick = (square: string): void => {
-    if (room.status !== "PLAYING" || chess.reason) return;
-    if (!myColor) return;
-    if (chess.turn !== myColor) {
-      setMoveError("Подождите своего хода.");
-      return;
-    }
+    if (gameOver) return;
+    if (!myColor || !isMyTurn) { setMoveError("Подождите своего хода."); return; }
 
-    const normalizedSquare = toSquare(square);
-    if (!normalizedSquare) return;
+    const sq = toSquare(square);
+    if (!sq) return;
 
-    const isMyTurn = chess.turn === myColor;
-    const piece = chessEngine.get(normalizedSquare);
-
-    if (selectedSquare && legalTargets.includes(normalizedSquare)) {
-      if (isPromotionMove(selectedSquare, normalizedSquare)) {
-        setPromotionTarget({ from: selectedSquare, to: normalizedSquare });
+    // If a piece is selected and we clicked a legal target → move
+    if (selectedSquare && legalTargets.includes(sq)) {
+      if (isPromotion(selectedSquare, sq)) {
+        setPromotionTarget({ from: selectedSquare, to: sq });
         return;
       }
-
-      void sendMove(selectedSquare, normalizedSquare).then((ok) => {
-        if (ok) {
-          setSelectedSquare(null);
-          setLegalTargets([]);
-          setLegalCaptures([]);
-        }
-      });
+      void sendMove(selectedSquare, sq);
       return;
     }
 
-    if (selectedSquare === normalizedSquare) {
-      setSelectedSquare(null);
-      setLegalTargets([]);
-      setMoveError(null);
+    // Deselect if clicking selected square
+    if (selectedSquare === sq) {
+      setSelectedSquare(null); setLegalTargets([]); setMoveError(null);
       return;
     }
 
-    if (!isMyTurn) {
-      setMoveError("Подождите своего хода.");
-      return;
-    }
-
+    // Select own piece
+    const piece = chessEngine.get(sq);
     if (piece && piece.color === myColor) {
-      const { targets, captures } = getTargetsForSquare(normalizedSquare);
-      setSelectedSquare(normalizedSquare);
+      const { targets, captures } = getLegalTargets(sq);
+      setSelectedSquare(sq);
       setLegalTargets(targets);
       setLegalCaptures(captures);
-      setMoveError(targets.length === 0 ? "У этой фигуры нет допустимых ходов." : null);
+      setMoveError(targets.length === 0 ? "Нет допустимых ходов." : null);
       return;
     }
 
-    if (selectedSquare) {
-      setMoveError("Недопустимая клетка. Выберите одну из подсвеченных.");
-    }
+    if (selectedSquare) setMoveError("Недопустимая клетка.");
+  };
+
+  // ── drag handler ────────────────────────────────────────────────────────────
+  // Always return false → board stays at chess.fen (server-controlled position).
+  // We fire the move and let FEN from the server drive the visual update.
+
+  const isDraggablePiece = ({ piece }: { piece: string }): boolean => {
+    if (gameOver || !myColor || !isMyTurn) return false;
+    // piece[0] is 'w' or 'b'
+    return piece[0] === myColor;
+  };
+
+  const onPieceDragBegin = (_piece: string, sourceSquare: string): void => {
+    const sq = toSquare(sourceSquare);
+    if (!sq) return;
+    const { targets, captures } = getLegalTargets(sq);
+    setSelectedSquare(sq);
+    setLegalTargets(targets);
+    setLegalCaptures(captures);
+    setMoveError(null);
   };
 
   const onPieceDrop = (sourceSquare: string, targetSquare: string): boolean => {
-    if (room.status !== "PLAYING" || chess.reason) return false;
-    if (!myColor) return false;
-    if (chess.turn !== myColor) {
-      setMoveError("Подождите своего хода.");
-      return false;
-    }
-
     const from = toSquare(sourceSquare);
-    const to = toSquare(targetSquare);
+    const to   = toSquare(targetSquare);
     if (!from || !to) return false;
 
-    const piece = chessEngine.get(from);
-    if (!piece || piece.color !== myColor) {
-      setMoveError("Можно двигать только свои фигуры.");
-      return false;
-    }
+    if (!myColor || !isMyTurn || gameOver) return false;
 
-    const { targets, captures } = getTargetsForSquare(from);
+    const { targets } = getLegalTargets(from);
     if (!targets.includes(to)) {
-      setMoveError("Недопустимая клетка. Выберите одну из подсвеченных.");
+      setMoveError("Недопустимый ход.");
+      setSelectedSquare(null); setLegalTargets([]);
       return false;
     }
 
-    setSelectedSquare(from);
-    setLegalTargets(targets);
-    setLegalCaptures(captures);
-
-    if (isPromotionMove(from, to)) {
+    if (isPromotion(from, to)) {
       setPromotionTarget({ from, to });
       return false;
     }
 
-    void sendMove(from, to).then((ok) => {
-      if (ok) {
-        setSelectedSquare(null);
-        setLegalTargets([]);
-        setLegalCaptures([]);
-      }
-    });
-
-    return true;
+    void sendMove(from, to);
+    return false; // let server FEN drive position
   };
-
-  const whitePlayerId = Object.entries(chess.colorByPlayerId).find(([, c]) => c === "w")?.[0] ?? "";
-  const blackPlayerId = Object.entries(chess.colorByPlayerId).find(([, c]) => c === "b")?.[0] ?? "";
-  const clocks = useMemo(() => getEffectiveClocks(chess, room.status, nowMs), [chess, room.status, nowMs]);
-  const squareStyles = useMemo(() => {
-    const styles: Record<string, React.CSSProperties> = {};
-    if (selectedSquare) {
-      styles[selectedSquare] = {
-        boxShadow: "inset 0 0 0 4px rgba(242, 201, 76, 0.95)"
-      };
-    }
-
-    for (const target of legalTargets) {
-      const isCapture = legalCaptures.includes(target);
-      styles[target] = isCapture
-        ? {
-            boxShadow: "inset 0 0 0 3px rgba(242, 201, 76, 0.95)"
-          }
-        : {
-            background:
-              "radial-gradient(circle, rgba(242,201,76,0.5) 0%, rgba(242,201,76,0.2) 45%, rgba(242,201,76,0.0) 70%)"
-          };
-    }
-
-    return styles;
-  }, [selectedSquare, legalTargets, legalCaptures]);
 
   const onSelectPromotion = (promotion: "q" | "r" | "b" | "n") => {
     if (!promotionTarget) return;
-    const { from, to } = promotionTarget;
-    void sendMove(from, to, promotion).then((ok) => {
-      if (ok) {
-        setSelectedSquare(null);
-        setLegalTargets([]);
-        setLegalCaptures([]);
-      }
-      setPromotionTarget(null);
-    });
+    void sendMove(promotionTarget.from, promotionTarget.to, promotion);
+    setPromotionTarget(null);
   };
 
+  // ── derived ─────────────────────────────────────────────────────────────────
+
+  const whiteId = Object.entries(chess.colorByPlayerId).find(([, c]) => c === "w")?.[0] ?? "";
+  const blackId = Object.entries(chess.colorByPlayerId).find(([, c]) => c === "b")?.[0] ?? "";
+  const clocks  = useMemo(() => getEffectiveClocks(chess, room.status, nowMs), [chess, room.status, nowMs]);
+
+  const squareStyles = useMemo((): Record<string, React.CSSProperties> => {
+    const styles: Record<string, React.CSSProperties> = {};
+    if (selectedSquare) {
+      styles[selectedSquare] = { boxShadow: "inset 0 0 0 4px rgba(242,201,76,0.9)" };
+    }
+    for (const target of legalTargets) {
+      styles[target] = legalCaptures.includes(target)
+        ? { boxShadow: "inset 0 0 0 3px rgba(242,201,76,0.9)" }
+        : { background: "radial-gradient(circle, rgba(242,201,76,0.45) 0%, rgba(242,201,76,0.15) 50%, transparent 70%)" };
+    }
+    return styles;
+  }, [selectedSquare, legalTargets, legalCaptures]);
+
+  // ── render ──────────────────────────────────────────────────────────────────
+
   return (
-    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+    <section className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_280px]">
       <Card>
-        <CardContent className="p-3">
+        <CardContent className="p-2 sm:p-3">
           <div ref={boardRef} className="game-canvas">
             <Chessboard
               id={`chess-board-${room.id}`}
               boardOrientation={orientation}
               position={chess.fen}
-              onSquareClick={onSquareClick}
-              onPieceDrop={onPieceDrop}
-              arePiecesDraggable={true}
               boardWidth={boardSize}
+              onSquareClick={onSquareClick}
+              onPieceDragBegin={onPieceDragBegin}
+              onPieceDrop={onPieceDrop}
+              isDraggablePiece={isDraggablePiece}
+              arePiecesDraggable={!gameOver}
               customDarkSquareStyle={{ backgroundColor: "var(--board-dark)" }}
               customLightSquareStyle={{ backgroundColor: "var(--board-light)" }}
               customSquareStyles={squareStyles}
               customBoardStyle={{
-                borderRadius: "12px",
-                boxShadow: "0 12px 30px rgba(0, 0, 0, 0.45)",
-                touchAction: "manipulation"
+                borderRadius: "10px",
+                boxShadow: "0 8px 32px rgba(0,0,0,0.5)"
               }}
             />
           </div>
@@ -323,46 +262,67 @@ export function ChessGame(): React.JSX.Element {
 
       <Card>
         <CardHeader>
-          <CardTitle>Блиц 10+0</CardTitle>
+          <CardTitle>Шахматы · Блиц 10+0</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">Ход: {chess.turn === "w" ? "Белые" : "Черные"}</p>
-          <p className="text-xs text-muted-foreground">Ходите перетягиванием или кликом: выберите фигуру и затем клетку назначения.</p>
-
-          <div className="rounded-md border border-border bg-[#23262a] p-3">
-            <div className="text-xs uppercase text-muted-foreground">Белые</div>
-            <div className="font-mono text-xl text-foreground">{formatClock(clocks[whitePlayerId] ?? 0)}</div>
+          {/* My color */}
+          <div className="rounded-xl border border-border bg-muted/30 px-4 py-2.5 text-sm">
+            Вы играете: <span className="font-semibold text-foreground">{myColor === "w" ? "Белыми ♔" : myColor === "b" ? "Чёрными ♚" : "Наблюдатель"}</span>
           </div>
 
-          <div className="rounded-md border border-border bg-[#23262a] p-3">
-            <div className="text-xs uppercase text-muted-foreground">Черные</div>
-            <div className="font-mono text-xl text-foreground">{formatClock(clocks[blackPlayerId] ?? 0)}</div>
+          {/* Turn */}
+          <div className={`rounded-xl border px-4 py-2.5 text-sm font-semibold ${
+            isMyTurn && !gameOver
+              ? "border-primary/40 bg-primary/10 text-primary"
+              : "border-border bg-muted/20 text-muted-foreground"
+          }`}>
+            {gameOver ? "Игра завершена" : isMyTurn ? "Ваш ход" : "Ход соперника..."}
           </div>
+
+          {/* Clocks */}
+          {[
+            { label: "Белые ♔", id: whiteId },
+            { label: "Чёрные ♚", id: blackId }
+          ].map(({ label, id }) => {
+            const ms = clocks[id] ?? 0;
+            const low = ms < 30_000;
+            return (
+              <div key={id} className={`rounded-xl border px-4 py-3 ${low ? "border-danger/40 bg-danger/10" : "border-border bg-muted/30"}`}>
+                <div className="text-xs text-muted-foreground">{label}</div>
+                <div className={`font-mono text-2xl font-bold tabular-nums ${low ? "text-danger" : "text-foreground"}`}>
+                  {formatClock(ms)}
+                </div>
+              </div>
+            );
+          })}
 
           {moveError ? (
-            <div className="rounded-md border border-[#d35d5d]/40 bg-[#2c2020] p-3 text-sm text-[#d35d5d]">
-              {moveError}
-            </div>
+            <div className="notice-error">{moveError}</div>
           ) : null}
 
           {chess.reason ? (
-            <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-sm text-[#f2c94c]">
+            <div className="notice-warn font-semibold">
               Игра завершена: {translateServerMessage(chess.reason)}
             </div>
           ) : null}
+
+          <p className="text-xs text-muted-foreground">
+            Перетащите фигуру или кликните: сначала фигура, затем клетка назначения.
+          </p>
         </CardContent>
       </Card>
 
+      {/* Promotion dialog */}
       {promotionTarget ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-5">
-            <h3 className="font-display text-lg font-semibold text-foreground">Выберите фигуру для превращения</h3>
-            <p className="mt-1 text-sm text-muted-foreground">Пешка достигла последней линии.</p>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button onClick={() => onSelectPromotion("q")}>Ферзь</Button>
-              <Button variant="secondary" onClick={() => onSelectPromotion("r")}>Ладья</Button>
-              <Button variant="secondary" onClick={() => onSelectPromotion("b")}>Слон</Button>
-              <Button variant="secondary" onClick={() => onSelectPromotion("n")}>Конь</Button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-xs rounded-2xl border border-border bg-card p-5 shadow-panel">
+            <h3 className="font-display text-lg font-semibold">Превращение пешки</h3>
+            <p className="mt-1 mb-4 text-sm text-muted-foreground">Выберите фигуру:</p>
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={() => onSelectPromotion("q")}>♛ Ферзь</Button>
+              <Button variant="secondary" onClick={() => onSelectPromotion("r")}>♜ Ладья</Button>
+              <Button variant="secondary" onClick={() => onSelectPromotion("b")}>♝ Слон</Button>
+              <Button variant="secondary" onClick={() => onSelectPromotion("n")}>♞ Конь</Button>
             </div>
             <Button variant="outline" className="mt-3 w-full" onClick={() => setPromotionTarget(null)}>
               Отмена

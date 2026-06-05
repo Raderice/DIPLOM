@@ -1,358 +1,276 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
-  connectSocket,
-  disconnectSocket,
-  emitChatMessage,
-  isTransientSocketIssue,
-  joinRoom,
-  leaveRoom,
-  onChatMessage,
-  onGameOver,
-  onGameState,
-  onPlayerDisconnected,
-  onPlayerReconnected,
-  onRoomJoined,
-  onRoomUpdate,
-  onSocketError,
-  setReady,
-  startRoom
+  connectSocket, disconnectSocket, emitChatMessage, isTransientSocketIssue,
+  joinRoom, leaveRoom, onChatMessage, onGameOver, onGameState, onPlayerDisconnected,
+  onPlayerReconnected, onRoomJoined, onRoomUpdate, onSocketError, setReady, startRoom
 } from "../socket/client";
 import { useGameStore } from "../store/gameStore";
-import { ChessGame } from "../games/Chess";
+import { ChessGame }    from "../games/Chess";
 import { CheckersGame } from "../games/Checkers";
-import { DurakGame } from "../games/Durak";
-import { AliasGame } from "../games/Alias";
-import { MafiaGame } from "../games/Mafia";
-import { Button } from "../components/ui/button";
+import { DurakGame }    from "../games/Durak";
+import { AliasGame }    from "../games/Alias";
+import { MafiaGame }    from "../games/Mafia";
+import { Button }       from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Input } from "../components/ui/input";
+import { Input }        from "../components/ui/input";
 import { roomStatusRu, translateServerMessage } from "../lib/i18n";
 import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
 
 export default function GamePage(): React.JSX.Element {
   const { roomId } = useParams<{ roomId: string }>();
-  const navigate = useNavigate();
+  const navigate   = useNavigate();
 
-  const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : new URLSearchParams("");
+  const room           = useGameStore((s) => s.room);
+  const gameState      = useGameStore((s) => s.gameState);
+  const chat           = useGameStore((s) => s.chat);
+  const connected      = useGameStore((s) => s.connected);
+  const loading        = useGameStore((s) => s.loading);
+  const setConnected   = useGameStore((s) => s.setConnected);
+  const setLoading     = useGameStore((s) => s.setLoading);
+  const setRoom        = useGameStore((s) => s.setRoom);
+  const setPlayers     = useGameStore((s) => s.setPlayers);
+  const setGameState   = useGameStore((s) => s.setGameState);
+  const pushChatMessage= useGameStore((s) => s.pushChatMessage);
+  const resetStore     = useGameStore((s) => s.reset);
 
-  const room = useGameStore((s) => s.room);
-  const gameState = useGameStore((s) => s.gameState);
-  const chat = useGameStore((s) => s.chat);
-  const connected = useGameStore((s) => s.connected);
-  const loading = useGameStore((s) => s.loading);
-  const setConnected = useGameStore((s) => s.setConnected);
-  const setLoading = useGameStore((s) => s.setLoading);
-  const setRoom = useGameStore((s) => s.setRoom);
-  const setPlayers = useGameStore((s) => s.setPlayers);
-  const setGameState = useGameStore((s) => s.setGameState);
-  const pushChatMessage = useGameStore((s) => s.pushChatMessage);
-  const resetStore = useGameStore((s) => s.reset);
-
-  const [chatInput, setChatInput] = useState("");
-  const [gameOverNotice, setGameOverNotice] = useState<string | null>(null);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [chatInput,        setChatInput]        = useState("");
+  const [gameOverNotice,   setGameOverNotice]   = useState<string | null>(null);
   const [connectionNotice, setConnectionNotice] = useState<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [actionNotice,     setActionNotice]     = useState<string | null>(null);
+  const [sidebarOpen,      setSidebarOpen]      = useState(false);
 
   useEffect(() => {
-    if (!roomId) {
-      navigate("/lobby");
-      return;
-    }
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chat]);
+
+  useEffect(() => {
+    if (!roomId) { navigate("/lobby"); return; }
     setLoading(true);
     const socket = connectSocket();
 
-    const offRoomJoined = onRoomJoined(({ room: joinedRoom, selfId }) => {
+    const offJoined = onRoomJoined(({ room: r, selfId }) => {
       window.localStorage.setItem("user_id", selfId);
-      setRoom(joinedRoom);
-      setLoading(false);
-      setConnected(true);
+      setRoom(r); setLoading(false); setConnected(true);
     });
 
-    const offRoomUpdate = onRoomUpdate(({ roomId: updatedRoomId, status, players }) => {
-      if (updatedRoomId !== roomId) return;
-      setPlayers(updatedRoomId, status as "WAITING" | "PLAYING" | "FINISHED", players);
+    const offUpdate = onRoomUpdate(({ roomId: rid, status, players }) => {
+      if (rid !== roomId) return;
+      setPlayers(rid, status as "WAITING" | "PLAYING" | "FINISHED", players);
     });
 
-    const offGameState = onGameState(({ roomId: updatedRoomId, state }) => {
-      if (updatedRoomId !== roomId) return;
+    const offState = onGameState(({ roomId: rid, state }) => {
+      if (rid !== roomId) return;
       setGameState(state);
     });
 
-    const offChat = onChatMessage((message) => {
-      if (message.roomId !== roomId) return;
-      pushChatMessage(message);
+    const offChat = onChatMessage((msg) => {
+      if (msg.roomId !== roomId) return;
+      pushChatMessage(msg);
     });
 
-    const offGameOver = onGameOver((payload) => {
+    const offOver = onGameOver((payload) => {
       if (payload.roomId !== roomId) return;
       const me = window.localStorage.getItem("user_id") ?? "";
-      const message =
-        payload.reason === "player-left"
-          ? payload.winnerId === me
-            ? "Соперник вышел из матча. Победа присуждена вам. Возврат в лобби..."
-            : "Вы вышли из матча. Поражение техническим поражением. Возврат в лобби..."
-          : `Игра завершена: ${translateServerMessage(payload.reason)}. Возврат в лобби...`;
-
-      setGameOverNotice(message);
-      window.setTimeout(() => {
-        navigate("/lobby");
-      }, 1800);
+      const msg = payload.reason === "player-left"
+        ? payload.winnerId === me
+          ? "Соперник вышел. Победа присуждена вам. Возврат в лобби..."
+          : "Вы вышли из матча. Поражение. Возврат в лобби..."
+        : `Игра завершена: ${translateServerMessage(payload.reason)}. Возврат в лобби...`;
+      setGameOverNotice(msg);
+      window.setTimeout(() => navigate("/lobby"), 2000);
     });
 
-    const offDisconnected = onPlayerDisconnected((payload) => {
-      if (payload.roomId !== roomId) return;
-      setConnectionNotice(`Игрок ${payload.userId} отключился. Ожидаем переподключение...`);
+    const offDC = onPlayerDisconnected((p) => {
+      if (p.roomId !== roomId) return;
+      setConnectionNotice(`${p.userId} отключился. Ожидаем...`);
     });
-
-    const offReconnected = onPlayerReconnected((payload) => {
-      if (payload.roomId !== roomId) return;
-      setConnectionNotice(`Игрок ${payload.userId} переподключился.`);
+    const offRC = onPlayerReconnected((p) => {
+      if (p.roomId !== roomId) return;
+      setConnectionNotice(`${p.userId} переподключился.`);
     });
-
-    const offSocketError = onSocketError((message) => {
+    const offErr = onSocketError((msg) => {
       setConnected(socket.connected);
-      setConnectionNotice(message);
+      setConnectionNotice(msg);
     });
 
-    const joinCurrentRoom = async () => {
-      for (let attempt = 1; attempt <= 3; attempt += 1) {
-        const response = await joinRoom({ roomId });
-        if (response.ok) {
-          setLoading(false);
-          setConnectionNotice(null);
-          return;
-        }
-
-        if (!isTransientSocketIssue(response.error)) {
-          setLoading(false);
-          setConnectionNotice(translateServerMessage(response.error));
-          navigate("/lobby");
-          return;
-        }
-
-        setConnectionNotice(`Соединение нестабильно. Переподключение... попытка ${attempt}/3`);
-        await new Promise((resolve) => window.setTimeout(resolve, 500 * attempt));
+    const join = async () => {
+      for (let i = 1; i <= 3; i++) {
+        const r = await joinRoom({ roomId });
+        if (r.ok) { setLoading(false); setConnectionNotice(null); return; }
+        if (!isTransientSocketIssue(r.error)) { setLoading(false); setConnectionNotice(translateServerMessage(r.error)); navigate("/lobby"); return; }
+        setConnectionNotice(`Переподключение... попытка ${i}/3`);
+        await new Promise((res) => window.setTimeout(res, 500 * i));
       }
-
       setLoading(false);
-      setConnectionNotice("Временная проблема сети. Остаемся в игре и ждем переподключения.");
+      setConnectionNotice("Временная проблема сети.");
     };
 
-    const onConnect = () => {
-      setConnected(true);
-      setConnectionNotice(null);
-      void joinCurrentRoom();
-    };
-
-    const onDisconnect = () => {
-      setConnected(false);
-      setConnectionNotice("Соединение потеряно. Ожидаем автоматическое переподключение...");
-    };
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-
-    if (socket.connected) {
-      void joinCurrentRoom();
-    }
+    socket.on("connect",    () => { setConnected(true);  setConnectionNotice(null); void join(); });
+    socket.on("disconnect", () => { setConnected(false); setConnectionNotice("Соединение потеряно. Переподключение..."); });
+    if (socket.connected) void join();
 
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      offRoomJoined();
-      offRoomUpdate();
-      offGameState();
-      offChat();
-      offGameOver();
-      offDisconnected();
-      offReconnected();
-      offSocketError();
-      disconnectSocket();
-      resetStore();
+      socket.off("connect"); socket.off("disconnect");
+      offJoined(); offUpdate(); offState(); offChat(); offOver(); offDC(); offRC(); offErr();
+      disconnectSocket(); resetStore();
     };
-  }, [
-    roomId,
-    navigate,
-    setConnected,
-    setGameState,
-    setLoading,
-    setPlayers,
-    setRoom,
-    pushChatMessage,
-    resetStore
-  ]);
+  }, [roomId, navigate, setConnected, setGameState, setLoading, setPlayers, setRoom, pushChatMessage, resetStore]);
 
-  if (!roomId) {
-    return <div className="p-6">Идентификатор комнаты не найден.</div>;
-  }
+  if (!roomId) return <div className="p-6">Идентификатор комнаты не найден.</div>;
+
+  const me      = window.localStorage.getItem("user_id") ?? "";
+  const myReady = Boolean(room?.players.find((p) => p.userId === me)?.ready);
+  const canStart= Boolean(room && room.hostId === me && room.players.filter((p) => p.connected).every((p) => p.ready));
 
   const sendChat = async () => {
     const text = chatInput.trim();
     if (!text) return;
-    const response = await emitChatMessage({ roomId, text });
-    if (!response.ok) {
-      setActionNotice(translateServerMessage(response.error));
-      return;
-    }
-    setActionNotice(null);
-    setChatInput("");
+    const r = await emitChatMessage({ roomId, text });
+    if (!r.ok) { setActionNotice(translateServerMessage(r.error)); return; }
+    setActionNotice(null); setChatInput("");
   };
 
   const toggleReady = async () => {
-    const response = await setReady({ roomId, ready: !myReady });
-    if (!response.ok) {
-      setActionNotice(translateServerMessage(response.error));
-      return;
-    }
-    setActionNotice(null);
+    const r = await setReady({ roomId, ready: !myReady });
+    if (!r.ok) setActionNotice(translateServerMessage(r.error));
   };
 
   const onStart = async () => {
     if (room) {
-      const connectedPlayers = room.players.filter((p) => p.connected);
-      const check = validateGamePlayerCount(room.gameType, connectedPlayers.length);
-      if (!check.ok) {
-        setActionNotice(translateServerMessage(check.message ?? gamePlayerCountMessage(room.gameType)));
-        return;
-      }
+      const conn = room.players.filter((p) => p.connected);
+      const check = validateGamePlayerCount(room.gameType, conn.length);
+      if (!check.ok) { setActionNotice(translateServerMessage(check.message ?? gamePlayerCountMessage(room.gameType))); return; }
     }
-    const response = await startRoom(roomId);
-    if (!response.ok) {
-      setActionNotice(translateServerMessage(response.error));
-      return;
-    }
-    setActionNotice(null);
+    const r = await startRoom(roomId);
+    if (!r.ok) setActionNotice(translateServerMessage(r.error));
   };
 
-  const onBackToLobby = async () => {
-    const response = await leaveRoom(roomId);
-    if (!response.ok) {
-      setActionNotice(translateServerMessage(response.error));
-      return;
-    }
-    setActionNotice(null);
+  const onBack = async () => {
+    const r = await leaveRoom(roomId);
+    if (!r.ok) { setActionNotice(translateServerMessage(r.error)); return; }
     navigate("/lobby");
   };
 
   const renderGame = (): React.JSX.Element => {
-    // render actual game when room/gameState loaded
-
-    if (!room || !gameState) {
-      return <div className="rounded-lg border p-4">Загрузка игры...</div>;
-    }
-    if (room.gameType === "chess") return <ChessGame />;
+    if (!room || !gameState) return (
+      <div className="flex items-center justify-center rounded-2xl border border-border bg-card p-8 text-muted-foreground">
+        Загрузка игры...
+      </div>
+    );
+    if (room.gameType === "chess")    return <ChessGame />;
     if (room.gameType === "checkers") return <CheckersGame />;
-    if (room.gameType === "durak") return <DurakGame />;
-    if (room.gameType === "alias") return <AliasGame />;
+    if (room.gameType === "durak")    return <DurakGame />;
+    if (room.gameType === "alias")    return <AliasGame />;
     return <MafiaGame />;
   };
 
-  const me = window.localStorage.getItem("user_id") ?? "";
-  const myReady = Boolean(room?.players.find((p) => p.userId === me)?.ready);
-  const canStart = Boolean(room && room.hostId === me && room.players.filter((p) => p.connected).every((p) => p.ready));
-
   return (
-    <main className="mx-auto grid max-w-7xl gap-4 p-4 md:p-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-      <section className="min-w-0 space-y-4">
-        <Card className="overflow-hidden">
-          <div className="border-b border-border bg-[#23262a] px-6 py-4">
-            <h2 className="font-display text-lg font-semibold tracking-wide text-foreground">
-              {room?.name ?? "Загрузка комнаты..."}
-            </h2>
+    <div className="mx-auto max-w-[1400px] px-3 py-4 sm:px-6 sm:py-6">
+
+      {/* Top bar */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`h-2 w-2 shrink-0 rounded-full ${connected ? "bg-green-500" : "bg-red-500"}`} />
+          <div className="min-w-0">
+            <div className="truncate font-semibold text-foreground">{room?.name ?? "Загрузка..."}</div>
+            <div className="text-xs text-muted-foreground">
+              {roomStatusRu(room?.status ?? "WAITING")} · {room?.players.filter((p) => p.connected).length ?? 0}/{room?.maxPlayers ?? "—"} игроков
+            </div>
           </div>
-          <CardHeader>
-            <CardTitle>Управление матчем</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="rounded-lg border border-border bg-[#23262a] px-3 py-2 text-sm text-muted-foreground">
-              Комната: {roomId} | Статус: {roomStatusRu(room?.status ?? "WAITING")} | Сокет: {connected ? "подключен" : "отключен"}
-            </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant={myReady ? "outline" : "default"} onClick={() => void toggleReady()}>
+            {myReady ? "Не готов" : "Готов"}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={!canStart || room?.status !== "WAITING"} onClick={() => void onStart()}>
+            Начать
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => void onBack()}>← Лобби</Button>
+          {/* Mobile sidebar toggle */}
+          <Button size="sm" variant="outline" className="lg:hidden" onClick={() => setSidebarOpen((v) => !v)}>
+            {sidebarOpen ? "Скрыть" : "Чат / Игроки"}
+          </Button>
+        </div>
+      </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Button onClick={() => void toggleReady()}>{myReady ? "Не готов" : "Готов"}</Button>
-              <Button variant="secondary" disabled={!canStart || room?.status !== "WAITING"} onClick={() => void onStart()}>
-                Начать игру
-              </Button>
-              <Button variant="outline" onClick={() => void onBackToLobby()}>Назад в лобби</Button>
-            </div>
+      {/* Notices */}
+      {gameOverNotice   ? <div className="notice-warn mb-3">{gameOverNotice}</div>   : null}
+      {connectionNotice ? <div className="notice-warn mb-3">{connectionNotice}</div> : null}
+      {actionNotice     ? <div className="notice-error mb-3">{actionNotice}</div>    : null}
 
-            {gameOverNotice ? (
-              <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-sm text-[#f2c94c]">
-                {gameOverNotice}
+      {/* Main layout */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+
+        {/* Game area */}
+        <div className="min-w-0 flex-1">
+          {loading
+            ? <div className="flex items-center justify-center rounded-2xl border border-border bg-card p-12 text-muted-foreground">Подключение...</div>
+            : renderGame()
+          }
+        </div>
+
+        {/* Sidebar — always visible on lg, toggle on mobile */}
+        <aside className={[
+          "flex w-full flex-col gap-4 lg:w-[300px] lg:shrink-0 xl:w-[320px]",
+          sidebarOpen ? "flex" : "hidden lg:flex"
+        ].join(" ")}>
+
+          {/* Players */}
+          <Card>
+            <CardHeader><CardTitle>Игроки</CardTitle></CardHeader>
+            <CardContent>
+              <ul className="space-y-2">
+                {(room?.players ?? []).map((p) => (
+                  <li key={p.userId} className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-3 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <div className={`h-2 w-2 rounded-full ${p.connected ? "bg-green-500" : "bg-muted-foreground"}`} />
+                      <span className="text-sm font-medium">
+                        {p.username}
+                        {room?.hostId === p.userId ? <span className="ml-1 text-xs text-primary">♛</span> : null}
+                        {p.userId === me ? <span className="ml-1 text-xs text-muted-foreground">(вы)</span> : null}
+                      </span>
+                    </div>
+                    <span className={`text-xs font-semibold ${p.ready ? "text-green-400" : "text-muted-foreground"}`}>
+                      {p.ready ? "✓" : "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+
+          {/* Chat */}
+          <Card className="flex flex-col">
+            <CardHeader><CardTitle>Чат</CardTitle></CardHeader>
+            <CardContent>
+              <div className="h-52 space-y-2 overflow-y-auto rounded-xl border border-border bg-muted/20 p-3 sm:h-60">
+                {chat.length === 0 ? (
+                  <p className="text-center text-xs text-muted-foreground pt-4">Пока нет сообщений</p>
+                ) : (
+                  chat.map((m) => (
+                    <div key={m.id} className="text-sm">
+                      <span className="font-semibold text-primary">{m.username}: </span>
+                      <span className="text-foreground">{m.text}</span>
+                    </div>
+                  ))
+                )}
+                <div ref={chatEndRef} />
               </div>
-            ) : null}
-
-            {connectionNotice ? (
-              <div className="rounded-md border border-[#f2c94c]/40 bg-[#2f2a1b] p-3 text-sm text-[#f2c94c]">
-                {connectionNotice}
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") void sendChat(); }}
+                  placeholder="Сообщение..."
+                />
+                <Button size="sm" onClick={() => void sendChat()}>→</Button>
               </div>
-            ) : null}
-
-            {actionNotice ? (
-              <div className="rounded-md border border-[#d35d5d]/40 bg-[#2c2020] p-3 text-sm text-[#d35d5d]">
-                {actionNotice}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <section className="min-w-0">
-          {loading ? <div className="rounded-lg border p-4">Подключение к комнате...</div> : renderGame()}
-        </section>
-      </section>
-
-      <aside className="min-w-0 space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Игроки</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {(room?.players ?? []).map((p) => (
-                <li key={p.userId} className="rounded-xl border border-border bg-[#23262a] px-3 py-2 text-sm">
-                  <div className="font-medium">
-                    {p.username}
-                    {room?.hostId === p.userId ? " (хост)" : ""}
-                  </div>
-                  <div className="text-muted-foreground">
-                    {p.connected ? "в сети" : "не в сети"} | {p.ready ? "готов" : "не готов"}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Чат</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-56 space-y-2 overflow-y-auto rounded-xl border border-border bg-[#1f2124] p-2 sm:h-64">
-              {chat.map((m) => (
-                <div key={m.id} className="text-sm">
-                  <span className="font-semibold">{m.username}: </span>
-                  <span>{m.text}</span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-2 flex gap-2">
-              <Input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    void sendChat();
-                  }
-                }}
-                placeholder="Введите сообщение + эмодзи"
-              />
-              <Button onClick={() => void sendChat()}>Отправить</Button>
-            </div>
-          </CardContent>
-        </Card>
-      </aside>
-    </main>
+            </CardContent>
+          </Card>
+        </aside>
+      </div>
+    </div>
   );
 }

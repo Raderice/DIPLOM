@@ -1,10 +1,14 @@
 export default function Footer(): React.JSX.Element {
   return (
-    <footer className="mt-8 border-t border-border bg-gradient-to-t from-transparent to-[#0b0b0c]/30">
-      <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-muted-foreground">
-        <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
-          <div>© {new Date().getFullYear()} BoardGames — учебный проект</div>
-          <div className="text-xs">Made with ♥ — Open-source</div>
+    <footer className="mt-auto border-t border-border/50 bg-card/30">
+      <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:px-6">
+        <div className="flex items-center gap-2">
+          <span className="font-display tracking-wide text-foreground/60">BoardGames</span>
+          <span>·</span>
+          <span>© {new Date().getFullYear()}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <span>Шахматы · Шашки · Дурак · Alias · Мафия</span>
         </div>
       </div>
     </footer>

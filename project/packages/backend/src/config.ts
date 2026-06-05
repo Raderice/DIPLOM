@@ -1,6 +1,9 @@
 import dotenv from "dotenv";
+import path from "node:path";
 
-dotenv.config();
+// Try local .env first, then fall back to monorepo root .env
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+dotenv.config({ path: path.resolve(process.cwd(), "../../.env") });
 
 function parseNumber(value: string | undefined, fallback: number): number {
   const parsed = Number(value);

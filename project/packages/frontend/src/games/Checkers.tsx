@@ -257,7 +257,7 @@ export function CheckersGame(): React.JSX.Element {
   };
 
   return (
-    <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+    <section className="flex flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_280px]">
       <Card>
         <CardContent className="p-3">
           <div ref={boardRef} className="game-canvas touch-none">

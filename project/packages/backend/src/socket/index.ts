@@ -697,6 +697,10 @@ export function createSocketServer(
 
         if (over) {
           await prisma.room.update({ where: { id: room.id }, data: { status: "FINISHED" } });
+          await prisma.gameSession.updateMany({
+            where: { roomId: room.id, endedAt: null },
+            data: { endedAt: new Date(), winnerId: over.winnerId ?? null }
+          });
           namespace.to(room.id).emit("game:over", over);
           emitRoomUpdate(namespace, room);
         }
