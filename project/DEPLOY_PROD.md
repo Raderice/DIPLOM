@@ -22,7 +22,15 @@ cd project
 
 ```bash
 cp .env.production.example .env.production
-# Edit .env.production - set DB password, CLIENT_ORIGIN, JWT secrets
+# Edit .env.production — set POSTGRES_PASSWORD, CLIENT_ORIGIN, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
+# Generate JWT secrets: openssl rand -hex 64
+```
+
+3. Symlink `.env.production` as `.env` so Docker Compose picks it up:
+
+```bash
+ln -sf .env.production .env
+# Or: docker compose --env-file .env.production up --build -d
 ```
 
 3. Make sure the `uploads` directory exists and is writable:
