@@ -8,6 +8,48 @@ import { Input } from "../components/ui/input";
 
 const API_URL = resolveApiBaseUrl();
 
+function ProfileStats({ history, profileId }: { history: any[]; profileId: string }) {
+  const wins    = history.filter((s) => s.winner?.id === profileId).length;
+  const losses  = history.filter((s) => s.winner && s.winner.id !== profileId).length;
+  const draws   = history.length - wins - losses;
+  const winRate = history.length > 0 ? Math.round((wins / history.length) * 100) : 0;
+
+  return (
+    <Card className="animate-rise">
+      <CardHeader><CardTitle>Статистика</CardTitle></CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "Игр",       value: history.length, color: "text-foreground" },
+            { label: "Побед",     value: wins,           color: "text-green-500" },
+            { label: "Поражений", value: losses,         color: "text-red-400" },
+            { label: "Винрейт",   value: `${winRate}%`,  color: "text-primary" },
+          ].map(({ label, value, color }) => (
+            <div key={label} className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
+              <div className={`text-2xl font-bold font-display ${color}`}>{value}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+            </div>
+          ))}
+        </div>
+        {history.length >= 3 && (
+          <div className="mt-4">
+            <div className="flex justify-between text-xs text-muted-foreground mb-1.5">
+              <span className="text-green-500">Побед {wins}</span>
+              {draws > 0 && <span>Ничьих {draws}</span>}
+              <span className="text-red-400">Поражений {losses}</span>
+            </div>
+            <div className="flex h-2 overflow-hidden rounded-full bg-border">
+              {wins   > 0 && <div className="bg-green-500"         style={{ width: `${(wins   / history.length) * 100}%` }} />}
+              {draws  > 0 && <div className="bg-muted-foreground/50" style={{ width: `${(draws  / history.length) * 100}%` }} />}
+              {losses > 0 && <div className="bg-red-400"           style={{ width: `${(losses / history.length) * 100}%` }} />}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ProfilePage(): React.JSX.Element {
   const { userId } = useParams<{ userId: string }>();
   const me = useAuthStore((s) => s.user);
@@ -162,7 +204,9 @@ export default function ProfilePage(): React.JSX.Element {
                       id="profile-bio"
                       value={form.bio}
                       onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
-                      className="h-24 w-full rounded-xl border border-border bg-input p-3 text-sm outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
+                      rows={3}
+                      className="w-full resize-y rounded-xl border border-border bg-input px-4 py-2.5 text-sm text-foreground outline-none transition-all duration-150 placeholder:text-muted-foreground/60 hover:border-border/80 focus:border-primary/70 focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
+                      placeholder="Расскажите о себе..."
                     />
                   </div>
                   <div className="flex gap-2">
@@ -192,53 +236,18 @@ export default function ProfilePage(): React.JSX.Element {
       {notice ? <div className="notice-error">{notice}</div> : null}
 
       {/* Stats */}
-      {history.length > 0 && (() => {
-        const wins   = history.filter((s) => s.winner?.id === profile.id).length;
-        const losses = history.filter((s) => s.winner && s.winner.id !== profile.id).length;
-        const draws  = history.length - wins - losses;
-        const winRate = Math.round((wins / history.length) * 100);
-        return (
-          <Card className="animate-rise">
-            <CardHeader><CardTitle>Статистика</CardTitle></CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {[
-                  { label: "Игр",       value: history.length,          color: "text-foreground" },
-                  { label: "Побед",     value: wins,                    color: "text-green-500" },
-                  { label: "Поражений", value: losses,                  color: "text-red-400" },
-                  { label: "Винрейт",   value: `${winRate}%`,           color: "text-primary" },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
-                    <div className={`text-2xl font-bold font-display ${color}`}>{value}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
-                  </div>
-                ))}
-              </div>
-              {history.length >= 3 && (
-                <div className="mt-3">
-                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                    <span>Побед {wins}</span>
-                    {draws > 0 && <span>Ничьих {draws}</span>}
-                    <span>Поражений {losses}</span>
-                  </div>
-                  <div className="flex h-2 overflow-hidden rounded-full bg-border">
-                    {wins > 0   && <div className="bg-green-500 transition-all" style={{ width: `${(wins / history.length) * 100}%` }} />}
-                    {draws > 0  && <div className="bg-muted-foreground/50 transition-all" style={{ width: `${(draws / history.length) * 100}%` }} />}
-                    {losses > 0 && <div className="bg-red-400 transition-all" style={{ width: `${(losses / history.length) * 100}%` }} />}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })()}
+      {history.length > 0 && <ProfileStats history={history} profileId={profile.id} />}
 
       {/* Recent opponents */}
       <Card className="animate-rise">
         <CardHeader><CardTitle>Недавние соперники</CardTitle></CardHeader>
         <CardContent>
           {opponents.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Нет данных</p>
+            <div className="py-8 text-center">
+              <p className="text-3xl mb-2">🤝</p>
+              <p className="text-sm font-medium text-foreground">Соперников пока нет</p>
+              <p className="text-xs text-muted-foreground mt-1">Сыграйте хоть одну партию, чтобы здесь появились игроки</p>
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {opponents.map((o) => (
@@ -266,7 +275,11 @@ export default function ProfilePage(): React.JSX.Element {
         <CardHeader><CardTitle>История матчей</CardTitle></CardHeader>
         <CardContent>
           {history.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Нет сыгранных матчей.</p>
+            <div className="py-8 text-center">
+              <p className="text-3xl mb-2">🎲</p>
+              <p className="text-sm font-medium text-foreground">История матчей пуста</p>
+              <p className="text-xs text-muted-foreground mt-1">Завершите игру, чтобы она появилась здесь</p>
+            </div>
           ) : (
             <ul className="space-y-2">
               {history.map((s) => (

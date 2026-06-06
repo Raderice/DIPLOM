@@ -154,7 +154,7 @@ export default function LobbyPage(): React.JSX.Element {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
-              {rooms.length > 0 ? `${rooms.reduce((s, r) => s + r.currentPlayers, 0)} онлайн` : "Онлайн"}
+              {`${rooms.reduce((s, r) => s + r.currentPlayers, 0)} онлайн`}
             </span>
           </div>
         </div>
@@ -213,20 +213,23 @@ export default function LobbyPage(): React.JSX.Element {
 
             <div className="space-y-1.5">
               <label htmlFor="room-game" className="text-sm font-medium text-foreground/80">Тип игры</label>
-              <select
-                id="room-game"
-                className="h-11 w-full rounded-xl border border-border bg-input px-4 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
-                value={form.gameType}
-                onChange={(e) => setForm((p) => ({
-                  ...p,
-                  gameType: e.target.value as GameType,
-                  maxPlayers: getGamePlayerLimits(e.target.value as GameType).min
-                }))}
-              >
-                {(Object.entries(GAME_META) as [GameType, typeof GAME_META[GameType]][]).map(([type, m]) => (
-                  <option key={type} value={type}>{m.icon} {m.label}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <select
+                  id="room-game"
+                  className="h-11 w-full appearance-none rounded-xl border border-border bg-input pl-4 pr-10 text-sm text-foreground outline-none transition-all duration-150 hover:border-border/80 focus:border-primary/70 focus:ring-2 focus:ring-primary/20 focus:ring-offset-0"
+                  value={form.gameType}
+                  onChange={(e) => setForm((p) => ({
+                    ...p,
+                    gameType: e.target.value as GameType,
+                    maxPlayers: getGamePlayerLimits(e.target.value as GameType).min
+                  }))}
+                >
+                  {(Object.entries(GAME_META) as [GameType, typeof GAME_META[GameType]][]).map(([type, m]) => (
+                    <option key={type} value={type}>{m.label}</option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">▾</span>
+              </div>
             </div>
 
             <div className="flex items-end gap-3">
@@ -319,28 +322,29 @@ export default function LobbyPage(): React.JSX.Element {
           </div>
 
           {/* Refresh progress bar */}
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-3 flex items-center gap-3">
             <div className="flex-1 h-1 rounded-full bg-border overflow-hidden">
               <div
-                className="h-full rounded-full bg-primary/50 transition-none"
+                className="h-full rounded-full bg-primary/60 transition-[width] duration-1000 ease-linear"
                 style={{ width: `${((REFRESH_INTERVAL - countdown) / REFRESH_INTERVAL) * 100}%` }}
               />
             </div>
-            <span className="text-xs tabular-nums text-muted-foreground w-10 text-right">
+            <span className="text-xs tabular-nums text-muted-foreground w-8 text-right shrink-0">
               {countdown}с
             </span>
           </div>
 
           {/* Game type filter */}
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Фильтр по типу игры">
             <button
               onClick={() => setRoomFilter("all")}
               className={[
-                "rounded-lg border px-3 py-1 text-xs font-medium transition-colors",
+                "min-h-[36px] rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 roomFilter === "all"
                   ? "border-primary/50 bg-primary/10 text-primary"
-                  : "border-border bg-muted/40 text-muted-foreground hover:text-foreground"
+                  : "border-border bg-muted/40 text-muted-foreground hover:border-border/70 hover:text-foreground"
               ].join(" ")}
+              aria-pressed={roomFilter === "all"}
             >
               Все
             </button>
@@ -349,11 +353,12 @@ export default function LobbyPage(): React.JSX.Element {
                 key={type}
                 onClick={() => setRoomFilter(type)}
                 className={[
-                  "rounded-lg border px-3 py-1 text-xs font-medium transition-colors",
+                  "min-h-[36px] rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   roomFilter === type
                     ? `${m.badgeClass} ring-1 ring-current`
-                    : "border-border bg-muted/40 text-muted-foreground hover:text-foreground"
+                    : "border-border bg-muted/40 text-muted-foreground hover:border-border/70 hover:text-foreground"
                 ].join(" ")}
+                aria-pressed={roomFilter === type}
               >
                 {m.icon} {m.label}
               </button>

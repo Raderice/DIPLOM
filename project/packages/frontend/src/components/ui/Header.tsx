@@ -69,7 +69,7 @@ export default function Header(): React.JSX.Element {
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
 
         {/* Brand */}
-        <Link to="/lobby" className="group flex items-center gap-3 select-none">
+        <Link to={user ? "/lobby" : "/login"} className="group flex items-center gap-3 select-none">
           <img
             src={logo}
             alt="BoardGames"
