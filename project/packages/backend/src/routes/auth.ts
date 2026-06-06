@@ -282,7 +282,8 @@ export function createAuthRouter(prisma: PrismaClient): Router {
           id: user.id,
           username: user.username,
           email: user.email,
-          role: mapRole(user.role)
+          role: mapRole(user.role),
+          avatarUrl: user.avatarUrl ?? null
         }
       });
     } catch {

@@ -111,8 +111,9 @@ export default function LobbyPage(): React.JSX.Element {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
-      if (!res.ok) { toast.error(translateServerMessage(((await res.json()) as { message?: string }).message ?? "Failed to create room")); return; }
-      navigate(`/room/${((await res.json()) as { id: string }).id}`);
+      const data = await res.json() as { id?: string; message?: string };
+      if (!res.ok) { toast.error(translateServerMessage(data.message ?? "Failed to create room")); return; }
+      navigate(`/room/${data.id}`);
     } catch { toast.error("Ошибка сети при создании комнаты."); }
   };
 
@@ -154,7 +155,7 @@ export default function LobbyPage(): React.JSX.Element {
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-2 w-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
-              {`${rooms.reduce((s, r) => s + r.currentPlayers, 0)} онлайн`}
+              {`${rooms.reduce((s, r) => s + r.currentPlayers, 0)} в комнатах`}
             </span>
           </div>
         </div>
@@ -164,22 +165,32 @@ export default function LobbyPage(): React.JSX.Element {
       <div className="animate-rise">
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Доступные игры</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
-          {(Object.entries(GAME_META) as [GameType, typeof GAME_META[GameType]][]).map(([type, m]) => (
-            <button
-              key={type}
-              onClick={() => setForm((p) => ({ ...p, gameType: type, maxPlayers: getGamePlayerLimits(type).min }))}
-              className={[
-                "flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-center transition-all duration-150 cursor-pointer",
-                "hover:shadow-glow-sm active:scale-[0.97]",
-                form.gameType === type
-                  ? `${m.badgeClass} ring-1 ring-current`
-                  : "border-border bg-card text-muted-foreground hover:border-border/80 hover:text-foreground"
-              ].join(" ")}
-            >
-              <span className="text-2xl leading-none">{m.icon}</span>
-              <span className="text-xs font-semibold">{m.label}</span>
-            </button>
-          ))}
+          {(Object.entries(GAME_META) as [GameType, typeof GAME_META[GameType]][]).map(([type, m]) => {
+            const activePlayers = rooms
+              .filter((r) => r.gameType === type)
+              .reduce((s, r) => s + r.currentPlayers, 0);
+            return (
+              <button
+                key={type}
+                onClick={() => setForm((p) => ({ ...p, gameType: type, maxPlayers: getGamePlayerLimits(type).min }))}
+                className={[
+                  "flex flex-col items-center gap-2 rounded-xl border px-3 py-4 text-center transition-all duration-150 cursor-pointer",
+                  "hover:shadow-glow-sm active:scale-[0.97]",
+                  form.gameType === type
+                    ? `${m.badgeClass} ring-1 ring-current`
+                    : "border-border bg-card text-muted-foreground hover:border-border/80 hover:text-foreground"
+                ].join(" ")}
+              >
+                <span className="text-2xl leading-none">{m.icon}</span>
+                <span className="text-xs font-semibold">{m.label}</span>
+                {activePlayers > 0 && (
+                  <span className="text-[10px] tabular-nums text-muted-foreground leading-none">
+                    {activePlayers} онлайн
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 

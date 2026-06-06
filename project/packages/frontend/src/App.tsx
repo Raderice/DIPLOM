@@ -29,25 +29,32 @@ import ProfilePage from "./pages/ProfilePage";
 import Layout from "./components/Layout";
 import { useAuthStore } from "./store/authStore";
 
+function AppLoader(): React.JSX.Element {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="flex flex-col items-center gap-3 text-muted-foreground">
+        <svg className="h-8 w-8 animate-spin text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+        </svg>
+        <span className="text-sm">Загрузка...</span>
+      </div>
+    </div>
+  );
+}
+
 function Protected({ children }: { children: React.JSX.Element }): React.JSX.Element {
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
-  if (!hydrated) {
-    return <div className="p-6">Загрузка...</div>;
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!hydrated) return <AppLoader />;
+  if (!user) return <Navigate to="/login" replace />;
   return children;
 }
 
 function AdminProtected({ children }: { children: React.JSX.Element }): React.JSX.Element {
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
-
-  if (!hydrated) return <div className="p-6">Загрузка...</div>;
+  if (!hydrated) return <AppLoader />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== "admin") return <Navigate to="/lobby" replace />;
   return children;
@@ -56,8 +63,7 @@ function AdminProtected({ children }: { children: React.JSX.Element }): React.JS
 function GuestOnly({ children }: { children: React.JSX.Element }): React.JSX.Element {
   const user = useAuthStore((s) => s.user);
   const hydrated = useAuthStore((s) => s.hydrated);
-
-  if (!hydrated) return <div className="p-6">Загрузка...</div>;
+  if (!hydrated) return <AppLoader />;
   if (user) return <Navigate to="/lobby" replace />;
   return children;
 }

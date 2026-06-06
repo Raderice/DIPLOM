@@ -70,14 +70,17 @@ export default function RoomPage(): React.JSX.Element {
 
     const offErr = onSocketError((msg) => { setNotice(translateServerMessage(msg)); toast.error(translateServerMessage(msg)); });
 
+    const onConnect    = () => void join();
+    const onDisconnect = () => setNotice("Соединение потеряно. Переподключение...");
     if (socket.connected) void join();
     else {
-      socket.on("connect",    () => void join());
-      socket.on("disconnect", () => setNotice("Соединение потеряно. Переподключение..."));
+      socket.on("connect",    onConnect);
+      socket.on("disconnect", onDisconnect);
     }
 
     return () => {
-      socket.off("connect"); socket.off("disconnect");
+      socket.off("connect",    onConnect);
+      socket.off("disconnect", onDisconnect);
       offJoined(); offUpdate(); offErr();
       if (!preserveSocketRef.current) { disconnectSocket(); reset(); }
     };
@@ -179,27 +182,38 @@ export default function RoomPage(): React.JSX.Element {
         <CardHeader><CardTitle>Игроки</CardTitle></CardHeader>
         <CardContent>
           <ul className="space-y-2">
-            {(room?.players ?? []).map((p) => (
-              <li key={p.userId} className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <div className={`h-2.5 w-2.5 rounded-full ${p.connected ? "bg-green-500" : "bg-red-500"}`} />
-                  <div>
-                    <div className="font-medium text-sm">
-                      {p.username}
-                      {room?.hostId === p.userId ? (
-                        <span className="ml-2 text-xs text-primary font-normal">хост</span>
-                      ) : null}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {p.connected ? "в сети" : "не в сети"}
+            {(room?.players ?? []).map((p) => {
+              const isMe = p.userId === me;
+              return (
+                <li key={p.userId} className={[
+                  "flex items-center justify-between rounded-xl border px-4 py-3 transition-colors",
+                  isMe
+                    ? "border-primary/30 bg-primary/5"
+                    : "border-border bg-muted/30"
+                ].join(" ")}>
+                  <div className="flex items-center gap-3">
+                    <div className={`h-2.5 w-2.5 rounded-full ${p.connected ? "bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.5)]" : "bg-red-500"}`} />
+                    <div>
+                      <div className="font-medium text-sm flex items-center gap-1.5">
+                        {p.username}
+                        {isMe && (
+                          <span className="text-[10px] font-normal text-muted-foreground bg-muted border border-border rounded px-1 py-0.5 leading-none">вы</span>
+                        )}
+                        {room?.hostId === p.userId ? (
+                          <span className="text-xs text-primary font-normal">хост</span>
+                        ) : null}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {p.connected ? "в сети" : "не в сети"}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <span className={`rounded-lg border px-2 py-0.5 text-xs font-semibold ${p.ready ? "border-green-500/40 bg-green-500/10 text-green-400" : "border-border bg-muted text-muted-foreground"}`}>
-                  {p.ready ? "Готов" : "Не готов"}
-                </span>
-              </li>
-            ))}
+                  <span className={`rounded-lg border px-2 py-0.5 text-xs font-semibold ${p.ready ? "border-green-500/40 bg-green-500/10 text-green-400" : "border-border bg-muted text-muted-foreground"}`}>
+                    {p.ready ? "Готов" : "Не готов"}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </CardContent>
       </Card>

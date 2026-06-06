@@ -84,11 +84,14 @@ export default function GamePage(): React.JSX.Element {
 
     const offDC = onPlayerDisconnected((p) => {
       if (p.roomId !== roomId) return;
-      setConnectionNotice(`${p.userId} отключился. Ожидаем...`);
+      const name = useGameStore.getState().room?.players.find((pl) => pl.userId === p.userId)?.username ?? p.userId;
+      setConnectionNotice(`${name} отключился. Ожидаем переподключения...`);
     });
     const offRC = onPlayerReconnected((p) => {
       if (p.roomId !== roomId) return;
-      setConnectionNotice(`${p.userId} переподключился.`);
+      const name = useGameStore.getState().room?.players.find((pl) => pl.userId === p.userId)?.username ?? p.userId;
+      setConnectionNotice(`${name} переподключился.`);
+      window.setTimeout(() => setConnectionNotice(null), 3000);
     });
     const offErr = onSocketError((msg) => {
       setConnected(socket.connected);
@@ -107,12 +110,15 @@ export default function GamePage(): React.JSX.Element {
       setConnectionNotice("Временная проблема сети.");
     };
 
-    socket.on("connect",    () => { setConnected(true);  setConnectionNotice(null); void join(); });
-    socket.on("disconnect", () => { setConnected(false); setConnectionNotice("Соединение потеряно. Переподключение..."); });
+    const onConnect    = () => { setConnected(true);  setConnectionNotice(null); void join(); };
+    const onDisconnect = () => { setConnected(false); setConnectionNotice("Соединение потеряно. Переподключение..."); };
+    socket.on("connect",    onConnect);
+    socket.on("disconnect", onDisconnect);
     if (socket.connected) void join();
 
     return () => {
-      socket.off("connect"); socket.off("disconnect");
+      socket.off("connect",    onConnect);
+      socket.off("disconnect", onDisconnect);
       offJoined(); offUpdate(); offState(); offChat(); offOver(); offDC(); offRC(); offErr();
       disconnectSocket(); resetStore();
     };

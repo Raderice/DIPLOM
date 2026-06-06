@@ -35,6 +35,7 @@ export interface PublicUser {
   username: string;
   email: string;
   role: Role;
+  avatarUrl?: string | null;
 }
 
 export interface UserProfile extends PublicUser {

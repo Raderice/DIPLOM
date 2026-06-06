@@ -105,7 +105,7 @@ export default function Header(): React.JSX.Element {
                 to="/profile"
                 className="flex items-center gap-2 rounded-xl border border-border bg-muted px-3 py-1.5 transition-colors hover:bg-border"
               >
-                <UserAvatar username={user.username} avatarUrl={(user as any).avatarUrl} />
+                <UserAvatar username={user.username} avatarUrl={user.avatarUrl ?? null} />
                 <span className="text-sm font-medium text-foreground">{user.username}</span>
               </Link>
               <Button variant="outline" size="sm" onClick={() => void logout()}>
@@ -160,7 +160,7 @@ export default function Header(): React.JSX.Element {
               <>
                 <MobileNavItem to="/profile" onClick={() => setOpen(false)}>
                   <span className="flex items-center gap-2">
-                    <UserAvatar username={user.username} avatarUrl={(user as any).avatarUrl} />
+                    <UserAvatar username={user.username} avatarUrl={user.avatarUrl ?? null} />
                     Профиль
                   </span>
                 </MobileNavItem>
