@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CreateRoomBody, RoomListItem } from "@board-games/shared";
 import { gamePlayerCountMessage, getGamePlayerLimits, validateGamePlayerCount } from "@board-games/shared";
@@ -8,8 +8,10 @@ import { Input } from "../components/ui/input";
 import { resolveApiBaseUrl } from "../lib/apiBaseUrl";
 import { gameTypeRu, roomStatusRu, translateServerMessage } from "../lib/i18n";
 import { useAuthStore } from "../store/authStore";
+import { toast } from "../store/toastStore";
 
 const API_URL = resolveApiBaseUrl();
+const REFRESH_INTERVAL = 30;
 
 type GameType = CreateRoomBody["gameType"];
 
@@ -21,18 +23,37 @@ const GAME_META: Record<GameType, { label: string; icon: string; badgeClass: str
   mafia:    { label: "Мафия",    icon: "🎭", badgeClass: "badge-mafia",    desc: "Городская ролевая игра" }
 };
 
+function RoomSkeleton() {
+  return (
+    <li className="flex items-center justify-between gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+      <div className="flex items-center gap-3 flex-1">
+        <div className="skeleton h-10 w-10 rounded-xl shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="skeleton h-3.5 w-32 rounded" />
+          <div className="skeleton h-3 w-24 rounded" />
+        </div>
+      </div>
+      <div className="skeleton h-8 w-16 rounded-lg" />
+    </li>
+  );
+}
+
 export default function LobbyPage(): React.JSX.Element {
   const navigate = useNavigate();
   const user     = useAuthStore((s) => s.user);
   const logout   = useAuthStore((s) => s.logout);
 
-  const [rooms,       setRooms]       = useState<RoomListItem[]>([]);
-  const [loading,     setLoading]     = useState(false);
-  const [inviteCode,  setInviteCode]  = useState("");
-  const [notice,      setNotice]      = useState<string | null>(null);
+  const [rooms,      setRooms]      = useState<RoomListItem[]>([]);
+  const [loading,    setLoading]    = useState(false);
+  const [inviteCode, setInviteCode] = useState("");
+  const [countdown,  setCountdown]  = useState(REFRESH_INTERVAL);
+  const [roomFilter, setRoomFilter] = useState<GameType | "all">("all");
   const [form, setForm] = useState<CreateRoomBody>({
     name: "", gameType: "chess", maxPlayers: 2, isPublic: true
   });
+
+  const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef= useRef<ReturnType<typeof setInterval> | null>(null);
 
   const canCreate   = useMemo(() => {
     if (form.name.trim().length < 3) return false;
@@ -41,38 +62,63 @@ export default function LobbyPage(): React.JSX.Element {
 
   const playerLimits = useMemo(() => getGamePlayerLimits(form.gameType), [form.gameType]);
 
-  const fetchRooms = async () => {
-    setLoading(true);
+  const filteredRooms = useMemo(() =>
+    roomFilter === "all" ? rooms : rooms.filter((r) => r.gameType === roomFilter),
+    [rooms, roomFilter]
+  );
+
+  const fetchRooms = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/rooms/public`, { credentials: "include" });
       if (!res.ok) throw new Error("Не удалось загрузить комнаты.");
       setRooms((await res.json()) as RoomListItem[]);
-      setNotice(null);
+      setCountdown(REFRESH_INTERVAL);
     } catch (err: unknown) {
-      setNotice(err instanceof Error ? err.message : "Неизвестная ошибка.");
+      toast.error(err instanceof Error ? err.message : "Неизвестная ошибка.");
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
-  useEffect(() => { void fetchRooms(); }, []);
+  const startAutoRefresh = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+
+    timerRef.current = setInterval(() => void fetchRooms(true), REFRESH_INTERVAL * 1000);
+    countdownRef.current = setInterval(() => setCountdown((c) => (c > 1 ? c - 1 : REFRESH_INTERVAL)), 1000);
+  };
+
+  useEffect(() => {
+    void fetchRooms();
+    startAutoRefresh();
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
+
+  const manualRefresh = () => {
+    void fetchRooms();
+    startAutoRefresh();
+  };
 
   const createRoom = async () => {
-    if (!canCreate) { setNotice(translateServerMessage(gamePlayerCountMessage(form.gameType))); return; }
+    if (!canCreate) { toast.warn(translateServerMessage(gamePlayerCountMessage(form.gameType))); return; }
     try {
       const res = await fetch(`${API_URL}/api/rooms`, {
         method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
-      if (!res.ok) { setNotice(translateServerMessage(((await res.json()) as { message?: string }).message ?? "Failed to create room")); return; }
+      if (!res.ok) { toast.error(translateServerMessage(((await res.json()) as { message?: string }).message ?? "Failed to create room")); return; }
       navigate(`/room/${((await res.json()) as { id: string }).id}`);
-    } catch { setNotice("Ошибка сети при создании комнаты."); }
+    } catch { toast.error("Ошибка сети при создании комнаты."); }
   };
 
   const joinByRoomId = async (roomId: string) => {
     const res = await fetch(`${API_URL}/api/rooms/${roomId}/join`, { method: "POST", credentials: "include" });
-    if (!res.ok) { setNotice(translateServerMessage(((await res.json()) as { message?: string }).message ?? "Failed to join room")); return; }
+    if (!res.ok) { toast.error(translateServerMessage(((await res.json()) as { message?: string }).message ?? "Failed to join room")); return; }
     navigate(`/room/${roomId}`);
   };
 
@@ -82,7 +128,7 @@ export default function LobbyPage(): React.JSX.Element {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ inviteCode: inviteCode.trim().toUpperCase() })
     });
-    if (!res.ok) { setNotice(translateServerMessage(((await res.json()) as { message?: string }).message ?? "Failed to join")); return; }
+    if (!res.ok) { toast.error(translateServerMessage(((await res.json()) as { message?: string }).message ?? "Failed to join")); return; }
     navigate(`/room/${((await res.json()) as { roomId: string }).roomId}`);
   };
 
@@ -105,13 +151,11 @@ export default function LobbyPage(): React.JSX.Element {
               Добро пожаловать, <span className="text-foreground font-medium">{user?.username}</span>
             </p>
           </div>
-          <div className="flex gap-2">
-            {user?.role === "admin" ? (
-              <Button variant="outline" size="sm" onClick={() => navigate("/admin")}>Админ</Button>
-            ) : null}
-            <Button variant="ghost" size="sm" asChild>
-              <a href="/profile">Профиль</a>
-            </Button>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full bg-green-500 shadow-[0_0_6px_rgba(74,222,128,0.6)]" />
+              {rooms.length > 0 ? `${rooms.reduce((s, r) => s + r.currentPlayers, 0)} онлайн` : "Онлайн"}
+            </span>
           </div>
         </div>
       </div>
@@ -139,8 +183,6 @@ export default function LobbyPage(): React.JSX.Element {
         </div>
       </div>
 
-      {notice ? <div className="notice-warn animate-rise">{notice}</div> : null}
-
       {/* Main grid */}
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
 
@@ -158,32 +200,42 @@ export default function LobbyPage(): React.JSX.Element {
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Input
-              value={form.name}
-              onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-              placeholder="Название комнаты"
-            />
+            <div className="space-y-1.5">
+              <label htmlFor="room-name" className="text-sm font-medium text-foreground/80">Название комнаты</label>
+              <Input
+                id="room-name"
+                value={form.name}
+                onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                placeholder="Например: Партия с друзьями"
+                onKeyDown={(e) => { if (e.key === "Enter" && canCreate) void createRoom(); }}
+              />
+            </div>
 
-            <select
-              className="h-11 w-full rounded-xl border border-border bg-input px-4 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
-              value={form.gameType}
-              onChange={(e) => setForm((p) => ({
-                ...p,
-                gameType: e.target.value as GameType,
-                maxPlayers: getGamePlayerLimits(e.target.value as GameType).min
-              }))}
-            >
-              {(Object.entries(GAME_META) as [GameType, typeof GAME_META[GameType]][]).map(([type, m]) => (
-                <option key={type} value={type}>{m.icon} {m.label}</option>
-              ))}
-            </select>
+            <div className="space-y-1.5">
+              <label htmlFor="room-game" className="text-sm font-medium text-foreground/80">Тип игры</label>
+              <select
+                id="room-game"
+                className="h-11 w-full rounded-xl border border-border bg-input px-4 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
+                value={form.gameType}
+                onChange={(e) => setForm((p) => ({
+                  ...p,
+                  gameType: e.target.value as GameType,
+                  maxPlayers: getGamePlayerLimits(e.target.value as GameType).min
+                }))}
+              >
+                {(Object.entries(GAME_META) as [GameType, typeof GAME_META[GameType]][]).map(([type, m]) => (
+                  <option key={type} value={type}>{m.icon} {m.label}</option>
+                ))}
+              </select>
+            </div>
 
-            <div className="flex items-center gap-3">
-              <div className="flex-1">
-                <label className="mb-1 block text-xs text-muted-foreground">
+            <div className="flex items-end gap-3">
+              <div className="flex-1 space-y-1.5">
+                <label htmlFor="room-players" className="text-sm font-medium text-foreground/80">
                   Игроков ({playerLimits.min}–{playerLimits.max})
                 </label>
                 <Input
+                  id="room-players"
                   type="number"
                   min={playerLimits.min}
                   max={playerLimits.max}
@@ -194,8 +246,9 @@ export default function LobbyPage(): React.JSX.Element {
                   }))}
                 />
               </div>
-              <label className="flex cursor-pointer items-center gap-2 pt-5 text-sm text-muted-foreground select-none">
+              <label htmlFor="room-public" className="flex cursor-pointer items-center gap-2 pb-2.5 text-sm text-muted-foreground select-none">
                 <input
+                  id="room-public"
                   type="checkbox"
                   checked={form.isPublic}
                   onChange={(e) => setForm((p) => ({ ...p, isPublic: e.target.checked }))}
@@ -219,11 +272,16 @@ export default function LobbyPage(): React.JSX.Element {
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
+              id="invite-code"
               maxLength={6}
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
               placeholder="AB12CD"
               className="text-center font-mono text-lg tracking-[0.3em] uppercase"
+              onKeyDown={(e) => { if (e.key === "Enter" && inviteCode.trim().length === 6) void joinByCode(); }}
+              aria-label="Код приглашения"
+              autoComplete="off"
+              inputMode="text"
             />
             <Button
               disabled={inviteCode.trim().length !== 6}
@@ -244,24 +302,82 @@ export default function LobbyPage(): React.JSX.Element {
       {/* Public rooms */}
       <Card className="animate-rise">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Публичные комнаты</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => void fetchRooms()} disabled={loading}>
-              {loading ? "..." : "↺ Обновить"}
-            </Button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle>Публичные комнаты</CardTitle>
+              {rooms.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {filteredRooms.length} {roomFilter === "all" ? "всего" : "по фильтру"}
+                </p>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={manualRefresh} isLoading={loading}>
+                {loading ? "Загрузка" : "↺ Обновить"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Refresh progress bar */}
+          <div className="mt-3 flex items-center gap-2">
+            <div className="flex-1 h-1 rounded-full bg-border overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary/50 transition-none"
+                style={{ width: `${((REFRESH_INTERVAL - countdown) / REFRESH_INTERVAL) * 100}%` }}
+              />
+            </div>
+            <span className="text-xs tabular-nums text-muted-foreground w-10 text-right">
+              {countdown}с
+            </span>
+          </div>
+
+          {/* Game type filter */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              onClick={() => setRoomFilter("all")}
+              className={[
+                "rounded-lg border px-3 py-1 text-xs font-medium transition-colors",
+                roomFilter === "all"
+                  ? "border-primary/50 bg-primary/10 text-primary"
+                  : "border-border bg-muted/40 text-muted-foreground hover:text-foreground"
+              ].join(" ")}
+            >
+              Все
+            </button>
+            {(Object.entries(GAME_META) as [GameType, typeof GAME_META[GameType]][]).map(([type, m]) => (
+              <button
+                key={type}
+                onClick={() => setRoomFilter(type)}
+                className={[
+                  "rounded-lg border px-3 py-1 text-xs font-medium transition-colors",
+                  roomFilter === type
+                    ? `${m.badgeClass} ring-1 ring-current`
+                    : "border-border bg-muted/40 text-muted-foreground hover:text-foreground"
+                ].join(" ")}
+              >
+                {m.icon} {m.label}
+              </button>
+            ))}
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">Загрузка...</div>
-          ) : rooms.length === 0 ? (
-            <div className="py-8 text-center">
-              <p className="text-3xl mb-2">🎲</p>
-              <p className="text-sm text-muted-foreground">Нет публичных комнат. Создайте первую!</p>
+            <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => <RoomSkeleton key={i} />)}
+            </ul>
+          ) : filteredRooms.length === 0 ? (
+            <div className="py-10 text-center">
+              <p className="text-4xl mb-3">🎲</p>
+              <p className="text-sm font-medium text-foreground">
+                {roomFilter === "all" ? "Нет публичных комнат" : `Нет комнат «${GAME_META[roomFilter as GameType]?.label}»`}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {roomFilter === "all" ? "Создайте первую!" : "Измените фильтр или создайте комнату"}
+              </p>
             </div>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {rooms.map((room) => {
+              {filteredRooms.map((room) => {
                 const m = GAME_META[room.gameType as GameType] ?? { icon: "?", label: room.gameType, badgeClass: "" };
                 const full    = room.currentPlayers >= room.maxPlayers;
                 const waiting = room.status === "WAITING";

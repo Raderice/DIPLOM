@@ -152,16 +152,17 @@ export default function ProfilePage(): React.JSX.Element {
             <div className="flex-1 min-w-0">
               {editing ? (
                 <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Имя пользователя</label>
-                    <Input value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))} />
+                  <div className="space-y-1.5">
+                    <label htmlFor="profile-username" className="text-sm font-medium text-foreground/80">Имя пользователя</label>
+                    <Input id="profile-username" value={form.username} onChange={(e) => setForm((p) => ({ ...p, username: e.target.value }))} />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">О себе</label>
+                  <div className="space-y-1.5">
+                    <label htmlFor="profile-bio" className="text-sm font-medium text-foreground/80">О себе</label>
                     <textarea
+                      id="profile-bio"
                       value={form.bio}
                       onChange={(e) => setForm((p) => ({ ...p, bio: e.target.value }))}
-                      className="h-24 w-full rounded-xl border border-border bg-input p-3 text-sm outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
+                      className="h-24 w-full rounded-xl border border-border bg-input p-3 text-sm outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
                     />
                   </div>
                   <div className="flex gap-2">
@@ -189,6 +190,48 @@ export default function ProfilePage(): React.JSX.Element {
       </Card>
 
       {notice ? <div className="notice-error">{notice}</div> : null}
+
+      {/* Stats */}
+      {history.length > 0 && (() => {
+        const wins   = history.filter((s) => s.winner?.id === profile.id).length;
+        const losses = history.filter((s) => s.winner && s.winner.id !== profile.id).length;
+        const draws  = history.length - wins - losses;
+        const winRate = Math.round((wins / history.length) * 100);
+        return (
+          <Card className="animate-rise">
+            <CardHeader><CardTitle>Статистика</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {[
+                  { label: "Игр",       value: history.length,          color: "text-foreground" },
+                  { label: "Побед",     value: wins,                    color: "text-green-500" },
+                  { label: "Поражений", value: losses,                  color: "text-red-400" },
+                  { label: "Винрейт",   value: `${winRate}%`,           color: "text-primary" },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="rounded-xl border border-border bg-muted/30 px-4 py-3 text-center">
+                    <div className={`text-2xl font-bold font-display ${color}`}>{value}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
+                  </div>
+                ))}
+              </div>
+              {history.length >= 3 && (
+                <div className="mt-3">
+                  <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                    <span>Побед {wins}</span>
+                    {draws > 0 && <span>Ничьих {draws}</span>}
+                    <span>Поражений {losses}</span>
+                  </div>
+                  <div className="flex h-2 overflow-hidden rounded-full bg-border">
+                    {wins > 0   && <div className="bg-green-500 transition-all" style={{ width: `${(wins / history.length) * 100}%` }} />}
+                    {draws > 0  && <div className="bg-muted-foreground/50 transition-all" style={{ width: `${(draws / history.length) * 100}%` }} />}
+                    {losses > 0 && <div className="bg-red-400 transition-all" style={{ width: `${(losses / history.length) * 100}%` }} />}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       {/* Recent opponents */}
       <Card className="animate-rise">

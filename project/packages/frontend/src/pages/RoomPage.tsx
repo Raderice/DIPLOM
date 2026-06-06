@@ -9,6 +9,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { gameTypeRu, roomStatusRu, translateServerMessage } from "../lib/i18n";
 import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
+import { toast } from "../store/toastStore";
 import QRCode from "qrcode";
 
 const GAME_ICONS: Record<string, string> = {
@@ -25,9 +26,10 @@ export default function RoomPage(): React.JSX.Element {
   const reset     = useGameStore((s) => s.reset);
 
   const preserveSocketRef = useRef(false);
-  const [notice,   setNotice]   = useState<string | null>(null);
-  const [showQr,   setShowQr]   = useState(false);
-  const [qrDataUrl,setQrDataUrl]= useState<string | null>(null);
+  const [notice,    setNotice]    = useState<string | null>(null);
+  const [showQr,    setShowQr]    = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [copied,    setCopied]    = useState(false);
 
   const me      = window.localStorage.getItem("user_id") ?? "";
   const myReady = Boolean(room?.players.find((p) => p.userId === me)?.ready);
@@ -66,7 +68,7 @@ export default function RoomPage(): React.JSX.Element {
       if (status === "FINISHED") { setNotice("Хост покинул комнату."); window.setTimeout(() => navigate("/lobby"), 900); }
     });
 
-    const offErr = onSocketError((msg) => setNotice(translateServerMessage(msg)));
+    const offErr = onSocketError((msg) => { setNotice(translateServerMessage(msg)); toast.error(translateServerMessage(msg)); });
 
     if (socket.connected) void join();
     else {
@@ -106,6 +108,15 @@ export default function RoomPage(): React.JSX.Element {
     navigate("/lobby");
   };
 
+  const copyInviteCode = () => {
+    if (!room?.inviteCode) return;
+    void navigator.clipboard.writeText(room.inviteCode).then(() => {
+      setCopied(true);
+      toast.success("Код скопирован!");
+      window.setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   const generateQr = async () => {
     if (!room?.inviteCode) return;
     const url = `${window.location.origin}/join/${room.inviteCode}`;
@@ -137,9 +148,21 @@ export default function RoomPage(): React.JSX.Element {
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
               <p className="text-xs text-muted-foreground mb-1">Код приглашения</p>
-              <p className="font-mono text-lg font-bold tracking-widest text-primary">
-                {room?.inviteCode ?? "—"}
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-mono text-lg font-bold tracking-widest text-primary">
+                  {room?.inviteCode ?? "—"}
+                </p>
+                {room?.inviteCode ? (
+                  <button
+                    onClick={copyInviteCode}
+                    aria-label={copied ? "Код скопирован" : "Скопировать код"}
+                    title="Скопировать код"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border bg-muted text-sm transition-colors hover:bg-border focus-visible:ring-2 focus-visible:ring-primary"
+                  >
+                    {copied ? "✓" : "⧉"}
+                  </button>
+                ) : null}
+              </div>
             </div>
             <div className="rounded-xl border border-border bg-muted/40 px-4 py-3">
               <p className="text-xs text-muted-foreground mb-1">Игроков</p>

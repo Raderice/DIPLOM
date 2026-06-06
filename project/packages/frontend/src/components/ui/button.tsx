@@ -6,9 +6,10 @@ type Variant = "default" | "secondary" | "outline" | "ghost" | "danger";
 type Size    = "sm" | "md" | "lg" | "icon";
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  asChild?:  boolean;
-  variant?:  Variant;
-  size?:     Size;
+  asChild?:   boolean;
+  variant?:   Variant;
+  size?:      Size;
+  isLoading?: boolean;
 }
 
 const variantClass: Record<Variant, string> = {
@@ -25,22 +26,39 @@ const variantClass: Record<Variant, string> = {
 };
 
 const sizeClass: Record<Size, string> = {
-  sm:   "h-8  min-h-[32px] px-3 text-xs",
-  md:   "h-10 min-h-[40px] px-4 text-sm",
+  sm:   "h-9  min-h-[36px] min-w-[44px] px-3 text-xs",
+  md:   "h-11 min-h-[44px] min-w-[44px] px-4 text-sm",
   lg:   "h-12 min-h-[48px] px-6 text-base",
-  icon: "h-10 min-h-[40px] w-10 p-0"
+  icon: "h-11 min-h-[44px] w-11 min-w-[44px] p-0"
 };
 
+function Spinner() {
+  return (
+    <svg
+      className="h-4 w-4 animate-spin"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
+    </svg>
+  );
+}
+
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "md", asChild = false, ...props }, ref) => {
+  ({ className, variant = "default", size = "md", asChild = false, isLoading, children, disabled, ...props }, ref) => {
     const Comp = asChild ? Slot : "button";
     return (
       <Comp
         ref={ref}
+        disabled={disabled ?? isLoading}
+        aria-busy={isLoading ? "true" : undefined}
         className={cn(
-          "inline-flex items-center justify-center rounded-xl font-semibold tracking-wide",
+          "inline-flex items-center justify-center gap-2 rounded-xl font-semibold tracking-wide",
           "transition-all duration-150 select-none",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
           "disabled:pointer-events-none disabled:opacity-40",
           "active:scale-[0.97]",
           variantClass[variant],
@@ -48,7 +66,9 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           className
         )}
         {...props}
-      />
+      >
+        {isLoading ? <><Spinner />{children}</> : children}
+      </Comp>
     );
   }
 );

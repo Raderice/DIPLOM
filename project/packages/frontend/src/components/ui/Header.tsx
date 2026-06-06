@@ -1,6 +1,7 @@
 import { NavLink, Link, useLocation } from "react-router-dom";
 import logo from "../../assets/logo.svg";
 import { useAuthStore } from "../../store/authStore";
+import { useThemeStore } from "../../store/themeStore";
 import { Button } from "./button";
 import { useState, useEffect } from "react";
 
@@ -21,6 +22,37 @@ function NavItem({ to, children, onClick }: { to: string; children: React.ReactN
     >
       {children}
     </NavLink>
+  );
+}
+
+function ThemeToggle() {
+  const { theme, toggle } = useThemeStore();
+  return (
+    <button
+      onClick={toggle}
+      aria-label={theme === "dark" ? "Включить светлую тему" : "Включить тёмную тему"}
+      title={theme === "dark" ? "Светлая тема" : "Тёмная тема"}
+      className="flex h-11 w-11 items-center justify-center rounded-xl border border-border bg-muted text-sm transition-colors hover:bg-border focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      {theme === "dark" ? "☀️" : "🌙"}
+    </button>
+  );
+}
+
+function UserAvatar({ username, avatarUrl }: { username: string; avatarUrl?: string | null }) {
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={username}
+        className="h-6 w-6 rounded-full border border-border object-cover"
+      />
+    );
+  }
+  return (
+    <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
+      <span className="text-xs font-bold text-primary">{username[0]?.toUpperCase()}</span>
+    </div>
   );
 }
 
@@ -66,14 +98,16 @@ export default function Header(): React.JSX.Element {
 
         {/* Desktop actions */}
         <div className="hidden md:flex md:items-center md:gap-2">
+          <ThemeToggle />
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-muted px-3 py-1.5">
-                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center">
-                  <span className="text-xs font-bold text-primary">{user.username[0]?.toUpperCase()}</span>
-                </div>
+              <Link
+                to="/profile"
+                className="flex items-center gap-2 rounded-xl border border-border bg-muted px-3 py-1.5 transition-colors hover:bg-border"
+              >
+                <UserAvatar username={user.username} avatarUrl={(user as any).avatarUrl} />
                 <span className="text-sm font-medium text-foreground">{user.username}</span>
-              </div>
+              </Link>
               <Button variant="outline" size="sm" onClick={() => void logout()}>
                 Выйти
               </Button>
@@ -91,27 +125,30 @@ export default function Header(): React.JSX.Element {
         </div>
 
         {/* Mobile hamburger */}
-        <button
-          aria-label={open ? "Закрыть меню" : "Открыть меню"}
-          aria-expanded={open}
-          onClick={() => setOpen((v) => !v)}
-          className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-muted text-foreground transition-colors hover:bg-border md:hidden"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+          <button
+            aria-label={open ? "Закрыть меню" : "Открыть меню"}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-muted text-foreground transition-colors hover:bg-border"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d={open ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
-            />
-          </svg>
-        </button>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d={open ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+              />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Mobile drawer */}
@@ -121,7 +158,12 @@ export default function Header(): React.JSX.Element {
             <MobileNavItem to="/lobby" onClick={() => setOpen(false)}>🎮 Лобби</MobileNavItem>
             {user ? (
               <>
-                <MobileNavItem to="/profile" onClick={() => setOpen(false)}>👤 Профиль</MobileNavItem>
+                <MobileNavItem to="/profile" onClick={() => setOpen(false)}>
+                  <span className="flex items-center gap-2">
+                    <UserAvatar username={user.username} avatarUrl={(user as any).avatarUrl} />
+                    Профиль
+                  </span>
+                </MobileNavItem>
                 {user.role === "admin" && (
                   <MobileNavItem to="/admin" onClick={() => setOpen(false)}>⚙️ Админ</MobileNavItem>
                 )}

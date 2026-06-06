@@ -35,12 +35,12 @@ export default function LoginPage(): React.JSX.Element {
               <h1 className="font-display text-3xl font-semibold leading-snug text-foreground sm:text-4xl">
                 Настольные игры<br className="hidden sm:block" /> в реальном времени
               </h1>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground max-w-md mx-auto lg:mx-0">
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground max-w-[52ch]  mx-auto lg:mx-0">
                 Шахматы, шашки, дурак, Alias и Мафия — всё в одном месте. Создавайте комнаты, приглашайте друзей и играйте мгновенно.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-2 max-w-md mx-auto lg:mx-0">
+            <div className="grid grid-cols-2 gap-3 text-sm max-w-md mx-auto lg:mx-0">
               {[
                 { icon: "♟", label: "Шахматы с часами" },
                 { icon: "⬤", label: "Русские шашки" },
@@ -48,7 +48,7 @@ export default function LoginPage(): React.JSX.Element {
                 { icon: "💬", label: "Alias и Мафия" }
               ].map(({ icon, label }) => (
                 <div key={label} className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 py-2.5">
-                  <span className="text-base">{icon}</span>
+                  <span className="text-base" aria-hidden="true">{icon}</span>
                   <span className="text-muted-foreground">{label}</span>
                 </div>
               ))}
@@ -62,43 +62,51 @@ export default function LoginPage(): React.JSX.Element {
               <p className="mt-1 text-sm text-muted-foreground">Войдите, чтобы продолжить игру</p>
             </div>
 
-            <form onSubmit={onSubmit} className="space-y-4">
+            <form onSubmit={onSubmit} className="space-y-4" noValidate>
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Почта</label>
+                <label htmlFor="login-email" className="text-sm font-medium text-foreground/80">
+                  Почта
+                </label>
                 <Input
+                  id="login-email"
                   type="email"
                   placeholder="you@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   autoComplete="email"
+                  hasError={!!error}
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Пароль</label>
+                <label htmlFor="login-password" className="text-sm font-medium text-foreground/80">
+                  Пароль
+                </label>
                 <Input
+                  id="login-password"
                   type="password"
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
+                  hasError={!!error}
                 />
               </div>
 
               {error ? (
-                <div className="notice-error">{error}</div>
+                <div className="notice-error" role="alert">{error}</div>
               ) : null}
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+              <Button type="submit" className="w-full" size="lg" isLoading={loading}>
                 {loading ? "Вход..." : "Войти"}
               </Button>
             </form>
 
             <p className="mt-5 text-center text-sm text-muted-foreground">
               Нет аккаунта?{" "}
-              <Link to="/register" className="font-semibold text-primary hover:underline">
+              <Link to="/register" className="font-semibold text-primary hover:underline focus-visible:underline">
                 Зарегистрироваться
               </Link>
             </p>
