@@ -319,12 +319,12 @@ export function DurakGame(): React.JSX.Element {
           <button
             type="button"
             onClick={doTake}
-            disabled={!isDefender || !canAct}
+            disabled={!isDefender || !canAct || state.phase !== "defend" || table.length === 0}
             className={[
               "col-span-2 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold",
               "transition-all duration-150 active:scale-95",
               "disabled:opacity-30 disabled:cursor-not-allowed",
-              isDefender && canAct
+              isDefender && canAct && state.phase === "defend" && table.length > 0
                 ? "bg-white/15 text-white hover:bg-white/20"
                 : "bg-white/8 text-white/40"
             ].join(" ")}
@@ -336,12 +336,15 @@ export function DurakGame(): React.JSX.Element {
           <button
             type="button"
             onClick={doPass}
-            disabled={!isAttacker || table.length === 0 || !canAct}
+            disabled={
+              !isAttacker || table.length === 0 || !canAct ||
+              table.some((p) => p.defense === null)
+            }
             className={[
               "col-span-2 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold",
               "transition-all duration-150 active:scale-95",
               "disabled:opacity-30 disabled:cursor-not-allowed",
-              isAttacker && table.length > 0 && canAct
+              isAttacker && table.length > 0 && canAct && table.every((p) => p.defense !== null)
                 ? "bg-white/15 text-white hover:bg-white/20"
                 : "bg-white/8 text-white/40"
             ].join(" ")}
@@ -399,9 +402,19 @@ export function DurakGame(): React.JSX.Element {
         )}
 
         {/* Hint */}
-        {!gameOver && myPhase && !selCard && (
+        {!gameOver && myPhase && (
           <p className="mt-2 px-4 text-center text-xs text-white/30">
-            {isAttacker ? "Нажмите на карту и нажмите «Атака»" : "Сначала нажмите атакующую карту на столе, затем выберите карту защиты"}
+            {isAttacker
+              ? selCard
+                ? "Нажмите «Атака» для хода"
+                : "Выберите карту для атаки"
+              : selCard && selPair
+                ? "Нажмите «Отбить»"
+                : selCard
+                  ? "Теперь нажмите атакующую карту на столе"
+                  : selPair
+                    ? "Теперь выберите карту защиты из руки"
+                    : "Выберите карту из руки или нажмите «Взять»"}
           </p>
         )}
       </div>

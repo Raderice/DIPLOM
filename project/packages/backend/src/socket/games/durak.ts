@@ -281,6 +281,9 @@ export function applyDurakMove(current: DurakState, payload: DurakMovePayload, p
     if (playerId !== state.defenderId) {
       return { ok: false, state: current, error: "Only defender can take cards" };
     }
+    if (state.table.length === 0) {
+      return { ok: false, state: current, error: "Nothing to take" };
+    }
 
     const defender = state.players.find((p) => p.userId === state.defenderId);
     if (!defender) {
@@ -293,13 +296,14 @@ export function applyDurakMove(current: DurakState, payload: DurakMovePayload, p
     }
     state.table = [];
 
+    // Draw cards for everyone except the defender (who just took)
     drawUpToSix(state, state.attackerId);
 
-    state.defenderId = nextActivePlayerId(state, state.defenderId);
-    if (state.defenderId === state.attackerId) {
-      state.attackerId = nextActivePlayerId(state, state.attackerId);
-      state.defenderId = nextActivePlayerId(state, state.attackerId);
-    }
+    // Next attacker = player after the defender who just took
+    const newAttackerId = nextActivePlayerId(state, state.defenderId);
+    const newDefenderId = nextActivePlayerId(state, newAttackerId);
+    state.attackerId = newAttackerId;
+    state.defenderId = newDefenderId;
 
     state.phase = "attack";
     state.turnPlayerId = state.attackerId;
