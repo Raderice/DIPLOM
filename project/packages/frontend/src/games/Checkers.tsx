@@ -269,6 +269,7 @@ export function CheckersGame(): React.JSX.Element {
                   const dark = (r + c) % 2 === 1;
                   const isSelected = selected?.[0] === r && selected[1] === c;
                   const isLegal = legalTargets.some(([lr, lc]) => lr === r && lc === c);
+                  const handler = () => void onCellClick(r, c);
                   return (
                     <Rect
                       key={`sq-${r}-${c}`}
@@ -280,13 +281,14 @@ export function CheckersGame(): React.JSX.Element {
                         isSelected
                           ? "#f2c94c"
                           : isLegal
-                            ? "#f2c94c"
+                            ? "#7ec97e"
                             : dark
                               ? DARK_SQUARE
                               : LIGHT_SQUARE
                       }
-                      opacity={isLegal || isSelected ? 0.88 : 1}
-                      onClick={() => void onCellClick(r, c)}
+                      opacity={isLegal || isSelected ? 0.9 : 1}
+                      onClick={handler}
+                      onTap={handler}
                     />
                   );
                 })
@@ -300,18 +302,28 @@ export function CheckersGame(): React.JSX.Element {
                   const cy = vr * cellSize + cellSize / 2;
                   const fill = piece.color === "white" ? "#f7f1e1" : "#1e2023";
                   const stroke = piece.color === "white" ? "#4b4f56" : "#e3d7b8";
-                  
+                  const isOwnSelected = selected?.[0] === r && selected[1] === c;
+                  const handler = () => void onCellClick(r, c);
 
                   return (
                     <Group
                       key={`piece-${piece.id}`}
                       x={cx}
                       y={cy}
-                      onClick={() => void onCellClick(r, c)}
+                      onClick={handler}
+                      onTap={handler}
                     >
-                      <Circle x={0} y={0} radius={cellSize * 0.36} fill={fill} stroke={stroke} strokeWidth={3} />
+                      <Circle
+                        x={0} y={0}
+                        radius={cellSize * 0.36}
+                        fill={fill}
+                        stroke={isOwnSelected ? "#f2c94c" : stroke}
+                        strokeWidth={isOwnSelected ? 4 : 3}
+                        shadowColor={isOwnSelected ? "#f2c94c" : undefined}
+                        shadowBlur={isOwnSelected ? 10 : 0}
+                      />
                       {piece.isKing ? (
-                        <Circle x={0} y={0} radius={cellSize * 0.2} fill="#f2c94c" stroke="#7a5f1b" strokeWidth={2} />
+                        <Circle x={0} y={0} radius={cellSize * 0.18} fill="#f2c94c" stroke="#7a5f1b" strokeWidth={2} />
                       ) : null}
                     </Group>
                   );

@@ -182,7 +182,8 @@ function hasAnyLegalMove(board: CheckersCell[][], ownerId: string): boolean {
 function removeCapturedPieceForMove(board: CheckersCell[][], from: Coord, to: Coord): boolean {
   const [fromRow, fromCol] = from;
   const [toRow, toCol] = to;
-  const movingPiece = board[fromRow][fromCol];
+  // Piece has already been moved to [toRow][toCol] before this is called
+  const movingPiece = board[toRow][toCol];
   if (!movingPiece) return false;
 
   if (!movingPiece.isKing) {
