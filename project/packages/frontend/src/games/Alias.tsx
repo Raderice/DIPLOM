@@ -36,8 +36,9 @@ export function AliasGame(): React.JSX.Element {
   const me = window.localStorage.getItem("user_id") ?? "";
   const currentTeam = state.teams[state.currentTeamIndex];
   const isExplainer = state.explainerId === me;
-  const timeLeft = state.roundEndsAtMs ? state.roundEndsAtMs - nowMs : 0;
-  const roundActive = state.status === "ROUND" && state.roundEndsAtMs !== null;
+  const isCurrentTeam = currentTeam?.playerIds.includes(me) ?? false;
+  const timeLeft = state.roundEndsAtMs ? Math.max(0, state.roundEndsAtMs - nowMs) : 0;
+  const roundActive = state.status === "ROUND" && state.roundEndsAtMs !== null && timeLeft > 0;
 
   const sendAction = async (action: AliasMovePayload["action"]) => {
     const payload: AliasMovePayload = {
@@ -53,7 +54,7 @@ export function AliasGame(): React.JSX.Element {
     setActionError(null);
   };
 
-  const canStartRound = state.status !== "ROUND" && room.status === "PLAYING";
+  const canStartRound = state.status !== "ROUND" && room.status === "PLAYING" && isCurrentTeam;
 
   return (
     <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -62,27 +63,88 @@ export function AliasGame(): React.JSX.Element {
           <CardTitle>Alias</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border border-border bg-[#23262a] p-3 text-sm text-muted-foreground">
-            <div>Раунд: {state.round}</div>
-            <div>Текущая команда: {currentTeam?.name ?? "-"}</div>
-            <div>Слов в колоде: {state.deckCount}</div>
+          {/* Meta info */}
+          <div className="grid grid-cols-3 gap-2 text-center text-sm">
+            <div className="rounded-lg border border-border bg-muted/30 px-2 py-2">
+              <div className="text-xs text-muted-foreground">Раунд</div>
+              <div className="font-bold text-foreground">{state.round}</div>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/30 px-2 py-2">
+              <div className="text-xs text-muted-foreground">Ходит</div>
+              <div className="font-bold text-foreground truncate">{currentTeam?.name ?? "—"}</div>
+            </div>
+            <div className="rounded-lg border border-border bg-muted/30 px-2 py-2">
+              <div className="text-xs text-muted-foreground">Карточек</div>
+              <div className="font-bold text-foreground">{state.deckCount + state.discardCount}</div>
+            </div>
           </div>
 
-          <div className="rounded-lg border border-border bg-[#1f1f22] p-3 text-center">
-            <div className="text-xs uppercase text-muted-foreground">Слово для объяснения</div>
-            <div className="mt-2 text-xl font-semibold text-foreground">
-              {roundActive && isExplainer ? state.activeWord ?? "..." : "Скрыто"}
+          {/* Explainer badge */}
+          {state.explainerId && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2 text-sm text-center">
+              <span className="text-muted-foreground">Объясняет: </span>
+              <span className="font-semibold text-foreground">
+                {isExplainer ? "Вы" : (
+                  state.teams.flatMap(t => t.playerIds).includes(state.explainerId ?? "")
+                    ? state.explainerId
+                    : state.explainerId
+                )}
+              </span>
             </div>
-            <div className="mt-1 text-sm text-muted-foreground">
-              {roundActive ? `Время: ${formatSeconds(timeLeft)}` : "Раунд не начат"}
+          )}
+
+          {/* Word + timer */}
+          <div className={[
+            "rounded-lg border p-4 text-center",
+            roundActive && isExplainer ? "border-primary/40 bg-primary/5" : "border-border bg-muted/20"
+          ].join(" ")}>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
+              {isExplainer ? "Ваше слово" : "Слово"}
+            </div>
+            <div className={[
+              "text-2xl font-bold",
+              roundActive && isExplainer ? "text-foreground" : "text-muted-foreground/40"
+            ].join(" ")}>
+              {roundActive && isExplainer ? (state.activeWord ?? "...") : "— — —"}
+            </div>
+            <div className={[
+              "mt-2 text-lg font-mono font-semibold tabular-nums",
+              timeLeft < 10_000 && roundActive ? "text-red-400" : "text-muted-foreground"
+            ].join(" ")}>
+              {state.status === "ROUND" ? formatSeconds(timeLeft) : "—:——"}
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={!canStartRound} onClick={() => void sendAction("startRound")}>Начать раунд</Button>
-            <Button disabled={!roundActive || !isExplainer} onClick={() => void sendAction("guess")}>Угадали</Button>
-            <Button disabled={!roundActive || !isExplainer} variant="secondary" onClick={() => void sendAction("skip")}>Пропуск</Button>
-            <Button disabled={!roundActive} variant="outline" onClick={() => void sendAction("endRound")}>Завершить раунд</Button>
+          {/* Actions */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              className="col-span-2"
+              disabled={!canStartRound}
+              onClick={() => void sendAction("startRound")}
+            >
+              ▶ Начать раунд
+            </Button>
+            <Button
+              disabled={!roundActive || !isExplainer}
+              onClick={() => void sendAction("guess")}
+            >
+              ✓ Угадали
+            </Button>
+            <Button
+              disabled={!roundActive || !isExplainer}
+              variant="secondary"
+              onClick={() => void sendAction("skip")}
+            >
+              → Пропуск
+            </Button>
+            <Button
+              className="col-span-2"
+              disabled={state.status !== "ROUND" || !isCurrentTeam}
+              variant="outline"
+              onClick={() => void sendAction("endRound")}
+            >
+              Завершить раунд
+            </Button>
           </div>
 
           {actionError ? (
@@ -90,6 +152,10 @@ export function AliasGame(): React.JSX.Element {
               {actionError}
             </div>
           ) : null}
+
+          {!isCurrentTeam && state.status !== "ROUND" && state.status !== "ENDED" && (
+            <p className="text-center text-xs text-muted-foreground">Ожидайте — сейчас ход команды {currentTeam?.name}</p>
+          )}
         </CardContent>
       </Card>
 

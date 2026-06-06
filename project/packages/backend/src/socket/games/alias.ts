@@ -116,7 +116,7 @@ function ensureRoundActive(state: AliasServerState, nowMs: number): boolean {
   return false;
 }
 
-export function sanitizeAliasState(state: AliasServerState): AliasState {
+export function sanitizeAliasState(state: AliasServerState, viewerId: string): AliasState {
   return {
     gameType: "alias",
     teams: state.teams,
@@ -127,7 +127,8 @@ export function sanitizeAliasState(state: AliasServerState): AliasState {
     roundDurationSec: state.roundDurationSec,
     roundEndsAtMs: state.roundEndsAtMs,
     explainerId: state.explainerId,
-    activeWord: state.activeWord,
+    // Only the explainer sees the active word
+    activeWord: state.explainerId === viewerId ? state.activeWord : null,
     deckCount: state.deck.length,
     discardCount: state.discard.length,
     status: state.status,
@@ -191,6 +192,10 @@ export function applyAliasMove(
       return { ok: false, state, error: "Alias teams are not configured" };
     }
 
+    if (!currentTeam.playerIds.includes(playerId)) {
+      return { ok: false, state, error: "Only the current team can start the round" };
+    }
+
     state.round += 1;
     const explainerIndex = (state.round - 1) % currentTeam.playerIds.length;
     state.explainerId = currentTeam.playerIds[explainerIndex] ?? currentTeam.playerIds[0];
@@ -203,16 +208,17 @@ export function applyAliasMove(
     }
   } else if (payload.action === "guess") {
     if (!ensureRoundActive(state, nowMs)) {
-      return { ok: false, state, error: "Alias round timed out" };
+      state.updatedAt = nowIso();
+      return { ok: true, state, error: "" };
+    }
+
+    if (state.explainerId !== playerId) {
+      return { ok: false, state, error: "Only the explainer can mark a guess" };
     }
 
     const team = state.teams[state.currentTeamIndex];
     if (!team) {
       return { ok: false, state, error: "Alias team not found" };
-    }
-
-    if (!team.playerIds.includes(playerId)) {
-      return { ok: false, state, error: "Only the active team can score" };
     }
 
     if (state.activeWord) {
@@ -233,7 +239,12 @@ export function applyAliasMove(
     }
   } else if (payload.action === "skip") {
     if (!ensureRoundActive(state, nowMs)) {
-      return { ok: false, state, error: "Alias round timed out" };
+      state.updatedAt = nowIso();
+      return { ok: true, state, error: "" };
+    }
+
+    if (state.explainerId !== playerId) {
+      return { ok: false, state, error: "Only the explainer can skip" };
     }
 
     if (state.activeWord) {
@@ -248,6 +259,12 @@ export function applyAliasMove(
     if (state.status !== "ROUND") {
       return { ok: false, state, error: "Alias round is not active" };
     }
+
+    const currentTeam = state.teams[state.currentTeamIndex];
+    if (!currentTeam || !currentTeam.playerIds.includes(playerId)) {
+      return { ok: false, state, error: "Only the current team can end the round" };
+    }
+
     endRound(state);
   }
 

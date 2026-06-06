@@ -19,7 +19,7 @@ export function toClientGameState(room: RuntimeRoom, viewerId: string): GameStat
     return sanitizeDurakStateForPlayer(room.state, viewerId);
   }
   if (room.state.gameType === "alias") {
-    return sanitizeAliasState(room.state);
+    return sanitizeAliasState(room.state, viewerId);
   }
   if (room.state.gameType === "mafia") {
     return sanitizeMafiaState(room.state, viewerId);
