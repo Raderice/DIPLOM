@@ -8,6 +8,8 @@ RUN npm ci
 
 FROM node:20-alpine AS build
 WORKDIR /repo
+ARG VITE_API_URL=""
+ENV VITE_API_URL=${VITE_API_URL}
 COPY --from=deps /repo/node_modules ./node_modules
 COPY --from=deps /repo/package.json ./package.json
 COPY tsconfig.base.json ./tsconfig.base.json
