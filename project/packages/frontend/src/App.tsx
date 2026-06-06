@@ -29,6 +29,24 @@ import ProfilePage from "./pages/ProfilePage";
 import Layout from "./components/Layout";
 import { useAuthStore } from "./store/authStore";
 
+function NotFoundPage(): React.JSX.Element {
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 px-4 text-center">
+      <p className="text-7xl font-bold font-display text-primary/30 select-none">404</p>
+      <div>
+        <h2 className="text-xl font-semibold text-foreground">Страница не найдена</h2>
+        <p className="mt-1 text-sm text-muted-foreground">Возможно, ссылка устарела или была удалена.</p>
+      </div>
+      <a
+        href="/lobby"
+        className="inline-flex h-10 items-center rounded-xl border border-border bg-card px-5 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
+      >
+        ← Вернуться в лобби
+      </a>
+    </div>
+  );
+}
+
 function AppLoader(): React.JSX.Element {
   return (
     <div className="flex min-h-[60vh] items-center justify-center">
@@ -84,7 +102,7 @@ const router = createBrowserRouter([
       { path: "/admin", element: <AdminProtected><AdminPage /></AdminProtected> },
       { path: "/profile", element: <Protected><ProfilePage /></Protected> },
       { path: "/profile/:userId", element: <Protected><ProfilePage /></Protected> },
-      { path: "*", element: <Navigate to="/lobby" replace /> }
+      { path: "*", element: <NotFoundPage /> }
     ]
   }
 ]);

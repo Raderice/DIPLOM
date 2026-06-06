@@ -8,6 +8,7 @@ import { useGameStore } from "../store/gameStore";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { gameTypeRu, roomStatusRu, translateServerMessage } from "../lib/i18n";
+import { usePageTitle } from "../lib/usePageTitle";
 import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
 import { toast } from "../store/toastStore";
 import QRCode from "qrcode";
@@ -106,6 +107,11 @@ export default function RoomPage(): React.JSX.Element {
   };
 
   const onBack = async () => {
+    const isHost = room?.hostId === me;
+    const msg = isHost
+      ? "Вы хост — выход закроет комнату для всех. Продолжить?"
+      : "Выйти из комнаты?";
+    if (!window.confirm(msg)) return;
     const r = await leaveRoom(roomId);
     if (!r.ok) { setNotice(translateServerMessage(r.error)); return; }
     navigate("/lobby");
@@ -127,6 +133,7 @@ export default function RoomPage(): React.JSX.Element {
     catch { /* ignore */ }
   };
 
+  usePageTitle(room ? `${room.name}` : "Комната");
   const icon = GAME_ICONS[room?.gameType ?? ""] ?? "🎮";
 
   return (
@@ -179,7 +186,27 @@ export default function RoomPage(): React.JSX.Element {
 
       {/* Players */}
       <Card className="animate-rise">
-        <CardHeader><CardTitle>Игроки</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Игроки</CardTitle>
+            {room && (() => {
+              const connected = room.players.filter((p) => p.connected);
+              const readyCount = connected.filter((p) => p.ready).length;
+              const total = connected.length;
+              const allReady = total > 0 && readyCount === total;
+              return (
+                <span className={[
+                  "rounded-lg border px-2.5 py-1 text-xs font-semibold",
+                  allReady
+                    ? "border-green-500/40 bg-green-500/10 text-green-400"
+                    : "border-border bg-muted text-muted-foreground"
+                ].join(" ")}>
+                  {readyCount}/{total} готовы
+                </span>
+              );
+            })()}
+          </div>
+        </CardHeader>
         <CardContent>
           <ul className="space-y-2">
             {(room?.players ?? []).map((p) => {

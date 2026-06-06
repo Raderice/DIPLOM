@@ -6,6 +6,7 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input } from "../components/ui/input";
 import { resolveApiBaseUrl } from "../lib/apiBaseUrl";
+import { usePageTitle } from "../lib/usePageTitle";
 import { gameTypeRu, roomStatusRu, translateServerMessage } from "../lib/i18n";
 import { useAuthStore } from "../store/authStore";
 import { toast } from "../store/toastStore";
@@ -45,13 +46,16 @@ export default function LobbyPage(): React.JSX.Element {
 
   const [rooms,      setRooms]      = useState<RoomListItem[]>([]);
   const [loading,    setLoading]    = useState(false);
+  const [everLoaded, setEverLoaded] = useState(false);
   const [inviteCode, setInviteCode] = useState("");
   const [countdown,  setCountdown]  = useState(REFRESH_INTERVAL);
   const [roomFilter, setRoomFilter] = useState<GameType | "all">("all");
+  const [roomSearch, setRoomSearch] = useState("");
   const [form, setForm] = useState<CreateRoomBody>({
     name: "", gameType: "chess", maxPlayers: 2, isPublic: true
   });
 
+  usePageTitle("Лобби");
   const timerRef    = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef= useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -62,10 +66,12 @@ export default function LobbyPage(): React.JSX.Element {
 
   const playerLimits = useMemo(() => getGamePlayerLimits(form.gameType), [form.gameType]);
 
-  const filteredRooms = useMemo(() =>
-    roomFilter === "all" ? rooms : rooms.filter((r) => r.gameType === roomFilter),
-    [rooms, roomFilter]
-  );
+  const filteredRooms = useMemo(() => {
+    let result = roomFilter === "all" ? rooms : rooms.filter((r) => r.gameType === roomFilter);
+    const q = roomSearch.trim().toLowerCase();
+    if (q) result = result.filter((r) => r.name.toLowerCase().includes(q));
+    return result;
+  }, [rooms, roomFilter, roomSearch]);
 
   const fetchRooms = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -74,6 +80,7 @@ export default function LobbyPage(): React.JSX.Element {
       if (!res.ok) throw new Error("Не удалось загрузить комнаты.");
       setRooms((await res.json()) as RoomListItem[]);
       setCountdown(REFRESH_INTERVAL);
+      setEverLoaded(true);
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "Неизвестная ошибка.");
     } finally {
@@ -345,6 +352,26 @@ export default function LobbyPage(): React.JSX.Element {
             </span>
           </div>
 
+          {/* Search */}
+          <div className="mt-3 relative">
+            <input
+              type="text"
+              value={roomSearch}
+              onChange={(e) => setRoomSearch(e.target.value)}
+              placeholder="Поиск по названию..."
+              className="h-9 w-full rounded-xl border border-border bg-input pl-3 pr-8 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/60 hover:border-border/80 focus:border-primary/70 focus:ring-2 focus:ring-primary/20"
+            />
+            {roomSearch && (
+              <button
+                onClick={() => setRoomSearch("")}
+                aria-label="Очистить поиск"
+                className="absolute right-2 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground hover:text-foreground hover:bg-border transition-colors text-xs"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
           {/* Game type filter */}
           <div className="mt-3 flex flex-wrap gap-2" role="group" aria-label="Фильтр по типу игры">
             <button
@@ -377,18 +404,26 @@ export default function LobbyPage(): React.JSX.Element {
           </div>
         </CardHeader>
         <CardContent>
-          {loading ? (
+          {loading && !everLoaded ? (
             <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {Array.from({ length: 3 }).map((_, i) => <RoomSkeleton key={i} />)}
+              {Array.from({ length: 6 }).map((_, i) => <RoomSkeleton key={i} />)}
             </ul>
           ) : filteredRooms.length === 0 ? (
             <div className="py-10 text-center">
               <p className="text-4xl mb-3">🎲</p>
               <p className="text-sm font-medium text-foreground">
-                {roomFilter === "all" ? "Нет публичных комнат" : `Нет комнат «${GAME_META[roomFilter as GameType]?.label}»`}
+                {roomSearch.trim()
+                  ? `Ничего не найдено по «${roomSearch.trim()}»`
+                  : roomFilter === "all"
+                    ? "Нет публичных комнат"
+                    : `Нет комнат «${GAME_META[roomFilter as GameType]?.label}»`}
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                {roomFilter === "all" ? "Создайте первую!" : "Измените фильтр или создайте комнату"}
+                {roomSearch.trim()
+                  ? "Попробуйте другой запрос"
+                  : roomFilter === "all"
+                    ? "Создайте первую!"
+                    : "Измените фильтр или создайте комнату"}
               </p>
             </div>
           ) : (

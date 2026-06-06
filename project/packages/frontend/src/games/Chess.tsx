@@ -296,6 +296,14 @@ export function ChessGame(): React.JSX.Element {
             );
           })}
 
+          {/* Move counter */}
+          <div className="flex items-center justify-between rounded-xl border border-border bg-muted/20 px-4 py-2.5">
+            <span className="text-xs text-muted-foreground">Ходов</span>
+            <span className="font-mono text-sm font-semibold text-foreground tabular-nums">
+              {Math.floor(chess.moveHistory.length / 2) + (chess.moveHistory.length % 2)}
+            </span>
+          </div>
+
           {moveError ? (
             <div className="notice-error">{moveError}</div>
           ) : null}

@@ -24,7 +24,8 @@ export default function Toaster(): React.JSX.Element {
           key={t.id}
           role="alert"
           className={[
-            "pointer-events-auto flex items-start gap-3 shadow-panel animate-slide-up",
+            "pointer-events-auto flex items-start gap-3 shadow-panel",
+            t.exiting ? "animate-toast-out" : "animate-slide-up",
             TYPE_CLASS[t.type] ?? "notice-info"
           ].join(" ")}
         >

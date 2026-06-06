@@ -15,6 +15,7 @@ import { Button }       from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Input }        from "../components/ui/input";
 import { roomStatusRu, translateServerMessage } from "../lib/i18n";
+import { usePageTitle } from "../lib/usePageTitle";
 import { gamePlayerCountMessage, validateGamePlayerCount } from "@board-games/shared";
 
 export default function GamePage(): React.JSX.Element {
@@ -40,10 +41,20 @@ export default function GamePage(): React.JSX.Element {
   const [connectionNotice, setConnectionNotice] = useState<string | null>(null);
   const [actionNotice,     setActionNotice]     = useState<string | null>(null);
   const [sidebarOpen,      setSidebarOpen]      = useState(false);
+  const [unreadCount,      setUnreadCount]      = useState(0);
+  const prevChatLenRef = useRef(0);
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
+    if (sidebarOpen) {
+      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setUnreadCount(0);
+      prevChatLenRef.current = chat.length;
+    } else {
+      const newMessages = chat.length - prevChatLenRef.current;
+      if (newMessages > 0) setUnreadCount((c) => c + newMessages);
+      prevChatLenRef.current = chat.length;
+    }
+  }, [chat, sidebarOpen]);
 
   useEffect(() => {
     if (!roomId) { navigate("/lobby"); return; }
@@ -124,6 +135,7 @@ export default function GamePage(): React.JSX.Element {
     };
   }, [roomId, navigate, setConnected, setGameState, setLoading, setPlayers, setRoom, pushChatMessage, resetStore]);
 
+  usePageTitle(room ? `${room.name}` : "Игра");
   if (!roomId) return <div className="p-6">Идентификатор комнаты не найден.</div>;
 
   const me      = window.localStorage.getItem("user_id") ?? "";
@@ -154,6 +166,7 @@ export default function GamePage(): React.JSX.Element {
   };
 
   const onBack = async () => {
+    if (!window.confirm("Покинуть игру и вернуться в лобби?")) return;
     const r = await leaveRoom(roomId);
     if (!r.ok) { setActionNotice(translateServerMessage(r.error)); return; }
     navigate("/lobby");
@@ -195,8 +208,18 @@ export default function GamePage(): React.JSX.Element {
           </Button>
           <Button size="sm" variant="ghost" onClick={() => void onBack()}>← Лобби</Button>
           {/* Mobile sidebar toggle */}
-          <Button size="sm" variant="outline" className="lg:hidden" onClick={() => setSidebarOpen((v) => !v)}>
+          <Button
+            size="sm"
+            variant="outline"
+            className="lg:hidden relative"
+            onClick={() => { setSidebarOpen((v) => !v); setUnreadCount(0); }}
+          >
             {sidebarOpen ? "Скрыть" : "Чат / Игроки"}
+            {!sidebarOpen && unreadCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground animate-pulse">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
           </Button>
         </div>
       </div>

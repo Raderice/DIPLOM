@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
+import { usePageTitle } from "../lib/usePageTitle";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 
@@ -11,6 +12,7 @@ export default function LoginPage(): React.JSX.Element {
   const error      = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
 
+  usePageTitle("Вход");
   const [email,    setEmail]    = useState("");
   const [password, setPassword] = useState("");
 

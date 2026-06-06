@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { resolveApiBaseUrl } from "../lib/apiBaseUrl";
+import { usePageTitle } from "../lib/usePageTitle";
 import { useAuthStore } from "../store/authStore";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -159,6 +160,7 @@ export default function ProfilePage(): React.JSX.Element {
   const me = useAuthStore((s) => s.user);
 
   const [profile,      setProfile]      = useState<any | null>(null);
+  usePageTitle(profile ? String(profile.username) : "Профиль");
   const [loading,      setLoading]      = useState(false);
   const [editing,      setEditing]      = useState(false);
   const [form,         setForm]         = useState({ username: "", bio: "", avatarUrl: "" });
@@ -172,37 +174,49 @@ export default function ProfilePage(): React.JSX.Element {
   useEffect(() => {
     const id = userId ?? me?.id ?? null;
     if (!id) return;
-    void fetchProfile(id);
-    void fetchHistory(id);
-    void fetchOpponents(id);
-  }, [userId, me?.id]);
+    const ctrl = new AbortController();
+    const { signal } = ctrl;
 
-  const fetchProfile = async (id: string) => {
     setLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/api/users/${id}`, { credentials: "include" });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      setProfile(data.user);
-      setAvatarErr(false);
-      setForm({ username: data.user.username ?? "", bio: data.user.bio ?? "", avatarUrl: data.user.avatarUrl ?? "" });
-    } catch { setNotice("Не удалось загрузить профиль."); }
-    finally  { setLoading(false); }
-  };
+    setProfile(null);
+    setHistory([]);
+    setOpponents([]);
+    setNotice(null);
 
-  const fetchHistory   = async (id: string) => {
-    try {
-      const res = await fetch(`${API_URL}/api/users/${id}/history`, { credentials: "include" });
-      if (res.ok) setHistory(((await res.json()) as { sessions: any[] }).sessions ?? []);
-    } catch { /* ignore */ }
-  };
+    const run = async () => {
+      try {
+        const [profileRes, historyRes, opponentsRes] = await Promise.all([
+          fetch(`${API_URL}/api/users/${id}`, { credentials: "include", signal }),
+          fetch(`${API_URL}/api/users/${id}/history`, { credentials: "include", signal }),
+          fetch(`${API_URL}/api/users/${id}/opponents`, { credentials: "include", signal }),
+        ]);
 
-  const fetchOpponents = async (id: string) => {
-    try {
-      const res = await fetch(`${API_URL}/api/users/${id}/opponents`, { credentials: "include" });
-      if (res.ok) setOpponents(((await res.json()) as { opponents: any[] }).opponents ?? []);
-    } catch { /* ignore */ }
-  };
+        if (!profileRes.ok) throw new Error("profile");
+        const profileData = await profileRes.json();
+        setProfile(profileData.user);
+        setAvatarErr(false);
+        setForm({ username: profileData.user.username ?? "", bio: profileData.user.bio ?? "", avatarUrl: profileData.user.avatarUrl ?? "" });
+
+        if (historyRes.ok) {
+          const d = await historyRes.json() as { sessions: any[] };
+          setHistory(d.sessions ?? []);
+        }
+
+        if (opponentsRes.ok) {
+          const d = await opponentsRes.json() as { opponents: any[] };
+          setOpponents(d.opponents ?? []);
+        }
+      } catch (err) {
+        if ((err as Error).name === "AbortError") return;
+        setNotice("Не удалось загрузить профиль.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void run();
+    return () => ctrl.abort();
+  }, [userId, me?.id]);
 
   const save = async () => {
     if (!profile) return;
@@ -410,7 +424,14 @@ export default function ProfilePage(): React.JSX.Element {
                     )}
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm truncate">{s.room?.name ?? m?.label ?? "Матч"}</div>
-                      <div className="text-xs text-muted-foreground">{new Date(s.startedAt).toLocaleString("ru-RU")}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {new Date(s.startedAt).toLocaleString("ru-RU")}
+                        {s.endedAt && (() => {
+                          const diffSec = Math.round((new Date(s.endedAt as string).getTime() - new Date(s.startedAt as string).getTime()) / 1000);
+                          const mins = Math.floor(diffSec / 60), secs = diffSec % 60;
+                          return <span className="ml-2 opacity-60">· {mins > 0 ? `${mins}м ` : ""}{secs}с</span>;
+                        })()}
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0">
                       <span className={`rounded-md border px-2 py-0.5 text-xs font-semibold ${resultClass}`}>
