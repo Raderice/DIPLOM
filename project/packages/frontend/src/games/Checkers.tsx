@@ -319,7 +319,7 @@ export function CheckersGame(): React.JSX.Element {
                         fill={fill}
                         stroke={isOwnSelected ? "#f2c94c" : stroke}
                         strokeWidth={isOwnSelected ? 4 : 3}
-                        shadowColor={isOwnSelected ? "#f2c94c" : undefined}
+                        shadowColor={isOwnSelected ? "#f2c94c" : "transparent"}
                         shadowBlur={isOwnSelected ? 10 : 0}
                       />
                       {piece.isKing ? (
