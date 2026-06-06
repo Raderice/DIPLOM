@@ -677,7 +677,7 @@ export function createSocketServer(
             over = { roomId: room.id, winnerId: result.over.winnerId, reason: result.over.reason };
           }
         } else if (payload.gameType === "mafia" && room.state.gameType === "mafia") {
-          const result = applyMafiaMove(room.state, payload, playerId);
+          const result = applyMafiaMove(room.state, payload, playerId, room.hostId);
           if (!result.ok) {
             ack(fail(result.error));
             return;

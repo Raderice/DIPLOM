@@ -54,13 +54,17 @@ function pickHighestVote(votes: Record<string, string>): string | null {
   }
   let top: string | null = null;
   let max = 0;
+  let tie = false;
   for (const [targetId, count] of counts.entries()) {
     if (count > max) {
       max = count;
       top = targetId;
+      tie = false;
+    } else if (count === max) {
+      tie = true;
     }
   }
-  return top;
+  return tie ? null : top;
 }
 
 function eliminate(state: MafiaServerState, targetId: string | null): void {
@@ -83,12 +87,19 @@ function resetNight(state: MafiaServerState): void {
 }
 
 export function sanitizeMafiaState(state: MafiaServerState, viewerId: string): MafiaState {
+  const viewer = state.players.find((p) => p.userId === viewerId);
+  const viewerIsMafia = viewer?.role === "mafia" && (viewer?.alive ?? false);
+
   return {
     gameType: "mafia",
     phase: state.phase,
     players: state.players.map((player) => {
       const isSelf = player.userId === viewerId;
-      const roleVisible = isSelf || !player.alive ? player.role : null;
+      // Role visible: own role, dead players (revealed), mafia sees teammates
+      const roleVisible =
+        isSelf || !player.alive || (viewerIsMafia && player.role === "mafia")
+          ? player.role
+          : null;
       return {
         userId: player.userId,
         username: player.username,
@@ -157,7 +168,8 @@ export function createInitialMafiaState(players: PlayerInRoom[]): MafiaServerSta
 export function applyMafiaMove(
   state: MafiaServerState,
   payload: MafiaMovePayload,
-  playerId: string
+  playerId: string,
+  hostId?: string
 ): EngineResult<MafiaServerState> {
   const actor = state.players.find((p) => p.userId === playerId);
   if (!actor || !actor.alive) {
@@ -231,6 +243,13 @@ export function applyMafiaMove(
     if (!isAliveTarget(state, payload.targetId)) {
       return { ok: false, state, error: "Target is not alive" };
     }
+    if (payload.targetId === playerId) {
+      return { ok: false, state, error: "Mafia cannot vote for themselves" };
+    }
+    const targetPlayer = state.players.find((p) => p.userId === payload.targetId);
+    if (targetPlayer?.role === "mafia") {
+      return { ok: false, state, error: "Mafia cannot vote for their own teammate" };
+    }
     state.nightVotes[playerId] = payload.targetId;
   } else if (payload.action === "night:doctor") {
     if (state.phase !== "night") {
@@ -264,6 +283,9 @@ export function applyMafiaMove(
     if (state.phase !== "night") {
       return { ok: false, state, error: "Mafia expects night actions" };
     }
+    if (hostId && playerId !== hostId) {
+      return { ok: false, state, error: "Only the host can resolve the night" };
+    }
     over = resolveNight();
   } else if (payload.action === "day:vote") {
     if (state.phase !== "day") {
@@ -284,6 +306,9 @@ export function applyMafiaMove(
   } else if (payload.action === "day:resolve") {
     if (state.phase !== "day") {
       return { ok: false, state, error: "Mafia expects day vote" };
+    }
+    if (hostId && playerId !== hostId) {
+      return { ok: false, state, error: "Only the host can resolve the day" };
     }
     over = resolveDay();
   }
