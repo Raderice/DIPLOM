@@ -27,6 +27,6 @@ export default defineConfig({
   preview: {
     host: "0.0.0.0",
     port: 4173,
-    allowedHosts: true
+    allowedHosts: ["boardgamesarena.ru", "www.boardgamesarena.ru", "91.107.122.49"]
   }
 });
